@@ -29,7 +29,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -44,10 +44,10 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	netbirdiov1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/controller"
-	webhooknetbirdiov1 "github.com/netbirdio/kubernetes-operator/internal/webhook/v1"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	openzrov1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/controller"
+	webhookopenzrov1 "github.com/openzro/openzro-operator/internal/webhook/v1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -59,11 +59,11 @@ var (
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
-	utilruntime.Must(netbirdiov1.AddToScheme(scheme))
+	utilruntime.Must(openzrov1.AddToScheme(scheme))
 	utilruntime.Must(corev1.AddToScheme(scheme))
 	utilruntime.Must(gatewayv1.Install(scheme))
 	utilruntime.Must(gatewayv1alpha2.Install(scheme))
-	utilruntime.Must(netbirdiov1alpha1.AddToScheme(scheme))
+	utilruntime.Must(openzrov1alpha1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -77,28 +77,28 @@ func main() {
 		clusterName                  string
 		namespacedNetworks           bool
 		clusterDNS                   string
-		netbirdAPIKey                string
+		openzroAPIKey                string
 		allowAutomaticPolicyCreation bool
 		defaultLabels                string
 		gatewayAPIEnabled            bool
 	)
 	flag.StringVar(&runtimeNamespace, "runtime-namespace", "", "Namespace the controller is running in")
-	flag.StringVar(&managementURL, "netbird-management-url", "https://api.netbird.io", "Management service URL")
-	flag.StringVar(&clientImage, "netbird-client-image", "netbirdio/netbird:latest", "Image for netbird client container")
+	flag.StringVar(&managementURL, "openzro-management-url", "https://api.openzro.io", "Management service URL")
+	flag.StringVar(&clientImage, "openzro-client-image", "openzro/openzro:latest", "Image for openzro client container")
 	flag.StringVar(
 		&clusterName,
 		"cluster-name",
 		"kubernetes",
-		"User-friendly name for kubernetes cluster for NetBird resource creation",
+		"User-friendly name for kubernetes cluster for openZro resource creation",
 	)
 	flag.BoolVar(
 		&namespacedNetworks,
 		"namespaced-networks",
 		false,
-		"Create NetBird Network per namespace, set to true if a NetworkPolicy exists that would require this",
+		"Create openZro Network per namespace, set to true if a NetworkPolicy exists that would require this",
 	)
 	flag.StringVar(&clusterDNS, "cluster-dns", "svc.cluster.local", "Cluster DNS name")
-	flag.StringVar(&netbirdAPIKey, "netbird-api-key", "", "API key for NetBird API operations")
+	flag.StringVar(&openzroAPIKey, "openzro-api-key", "", "API key for openZro API operations")
 	flag.BoolVar(
 		&allowAutomaticPolicyCreation,
 		"allow-automatic-policy-creation",
@@ -193,13 +193,13 @@ func main() {
 			BindAddress: metricsAddr,
 		},
 		Client: client.Options{
-			FieldOwner: "netbird-operator",
+			FieldOwner: "openzro-operator",
 		},
 		WebhookServer:           webhookServer,
 		HealthProbeBindAddress:  probeAddr,
 		LeaderElectionNamespace: runtimeNamespace,
 		LeaderElection:          enableLeaderElection,
-		LeaderElectionID:        "operator.netbird.io",
+		LeaderElectionID:        "operator.openzro.io",
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")
@@ -215,22 +215,22 @@ func main() {
 	}
 
 	if enableWebhooks {
-		if err = webhooknetbirdiov1.SetupPodWebhookWithManager(mgr, managementURL, clientImage); err != nil {
+		if err = webhookopenzrov1.SetupPodWebhookWithManager(mgr, managementURL, clientImage); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Pod")
 			os.Exit(1)
 		}
 	}
 
-	if len(netbirdAPIKey) > 0 {
-		nbClient := netbird.NewWithOptions(
-			netbird.WithManagementURL(managementURL),
-			netbird.WithBearerToken(netbirdAPIKey),
-			netbird.WithUserAgent("netbird-operator"),
+	if len(openzroAPIKey) > 0 {
+		nbClient := openzro.NewWithOptions(
+			openzro.WithManagementURL(managementURL),
+			openzro.WithBearerToken(openzroAPIKey),
+			openzro.WithUserAgent("openzro-operator"),
 		)
 
 		if err = (&controller.NBRoutingPeerReconciler{
 			Client:             mgr.GetClient(),
-			Netbird:            nbClient,
+			openZro:            nbClient,
 			ClientImage:        clientImage,
 			ClusterName:        clusterName,
 			ManagementURL:      managementURL,
@@ -255,7 +255,7 @@ func main() {
 
 		if err = (&controller.NBResourceReconciler{
 			Client:                       mgr.GetClient(),
-			Netbird:                      nbClient,
+			openZro:                      nbClient,
 			AllowAutomaticPolicyCreation: allowAutomaticPolicyCreation,
 			ClusterName:                  clusterName,
 			DefaultLabels:                defaultLabelsMap,
@@ -266,7 +266,7 @@ func main() {
 
 		if err = (&controller.NBGroupReconciler{
 			Client:  mgr.GetClient(),
-			Netbird: nbClient,
+			openZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NBGroup")
 			os.Exit(1)
@@ -274,14 +274,14 @@ func main() {
 
 		if err = (&controller.NBPolicyReconciler{
 			Client:  mgr.GetClient(),
-			Netbird: nbClient,
+			openZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create controller", "controller", "NBPolicy")
 			os.Exit(1)
 		}
 
 		if enableWebhooks {
-			if err = webhooknetbirdiov1.SetupNBGroupWebhookWithManager(mgr); err != nil {
+			if err = webhookopenzrov1.SetupNBGroupWebhookWithManager(mgr); err != nil {
 				setupLog.Error(err, "unable to create webhook", "webhook", "NBGroup")
 				os.Exit(1)
 			}
@@ -289,21 +289,21 @@ func main() {
 
 		if err := (&controller.SetupKeyReconciler{
 			Client:  mgr.GetClient(),
-			Netbird: nbClient,
+			openZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "Failed to create controller", "controller", "SetupKey")
 			os.Exit(1)
 		}
 		if err := (&controller.GroupReconciler{
 			Client:  mgr.GetClient(),
-			Netbird: nbClient,
+			openZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "Failed to create controller", "controller", "Group")
 			os.Exit(1)
 		}
 		if err := (&controller.NetworkRouterReconciler{
 			Client:        mgr.GetClient(),
-			Netbird:       nbClient,
+			openZro:       nbClient,
 			ClientImage:   clientImage,
 			ManagementURL: managementURL,
 		}).SetupWithManager(mgr); err != nil {
@@ -312,7 +312,7 @@ func main() {
 		}
 		if err := (&controller.NetworkResourceReconciler{
 			Client:  mgr.GetClient(),
-			Netbird: nbClient,
+			openZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "Failed to create controller", "controller", "NetworkResource")
 			os.Exit(1)
@@ -333,7 +333,7 @@ func main() {
 			}
 			if err = (&controller.HTTPRouteReconciler{
 				Client:  mgr.GetClient(),
-				Netbird: nbClient,
+				openZro: nbClient,
 			}).SetupWithManager(mgr); err != nil {
 				setupLog.Error(err, "unable to create controller", "controller", "HTTPRoute")
 				os.Exit(1)
@@ -346,7 +346,7 @@ func main() {
 			}
 		}
 	} else {
-		setupLog.Info("netbird API key not provided, ingress capabilities disabled")
+		setupLog.Info("openzro API key not provided, ingress capabilities disabled")
 	}
 	// +kubebuilder:scaffold:builder
 

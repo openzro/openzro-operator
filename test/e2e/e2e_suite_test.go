@@ -25,7 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/netbirdio/kubernetes-operator/test/utils"
+	"github.com/openzro/openzro-operator/test/utils"
 )
 
 var (
@@ -39,7 +39,7 @@ var (
 
 	// projectImage is the name of the image which will be build and loaded
 	// with the code source changes to be tested.
-	projectImage = "docker.io/netbirdio/kubernetes-operator:e2e"
+	projectImage = "docker.io/openzro/openzro-operator:e2e"
 )
 
 // TestE2E runs the end-to-end (e2e) test suite for the project. These tests execute in an isolated,

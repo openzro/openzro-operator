@@ -8,7 +8,7 @@ jobs:
       - name: Clone the code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd #v6.0.2
       - name: Lint Helm Chart
-        run: helm lint ./helm/kubernetes-operator
+        run: helm lint ./helm/openzro-operator
   test:
     runs-on: ubuntu-latest
     steps:
@@ -29,8 +29,8 @@ jobs:
         run: kind create cluster
       - name: Prepare operator
         run: |
-          make docker-build IMG=netbirdio/kubernetes-operator:debug
-          kind load docker-image netbirdio/kubernetes-operator:debug
+          make docker-build IMG=openzro/openzro-operator:debug
+          kind load docker-image openzro/openzro-operator:debug
       - name: Install cert-manager via Helm
         run: |
           helm repo add jetstack https://charts.jetstack.io
@@ -43,7 +43,7 @@ jobs:
           kubectl wait --namespace cert-manager --for=condition=available --timeout=300s deployment/cert-manager-webhook
       - name: Install Helm chart for project
         run: |
-          helm install test-chart --create-namespace --namespace netbird --set 'operator.image.tag=debug' ./helm/kubernetes-operator
+          helm install test-chart --create-namespace --namespace openzro --set 'operator.image.tag=debug' ./helm/openzro-operator
       - name: Check Helm release status
         run: |
-          helm status test-chart --namespace netbird
+          helm status test-chart --namespace openzro

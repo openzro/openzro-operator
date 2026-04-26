@@ -9,7 +9,7 @@ import (
 // ResourceReferenceApplyConfiguration represents a declarative configuration of the ResourceReference type for use
 // with apply.
 type ResourceReferenceApplyConfiguration struct {
-	// ID is the id of a resource in the Netbird API.
+	// ID is the id of a resource in the openZro API.
 	ID *string `json:"id,omitempty"`
 	// LocalReference is a reference to a object in the same namespace.
 	LocalRef *v1.LocalObjectReference `json:"localRef,omitempty"`

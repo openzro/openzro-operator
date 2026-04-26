@@ -19,10 +19,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	"github.com/netbirdio/kubernetes-operator/internal/util"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	"github.com/openzro/openzro-operator/internal/util"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 )
 
 var _ = Describe("NBRoutingPeer Controller", func() {
@@ -35,8 +35,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 			Name:      resourceName,
 			Namespace: "default",
 		}
-		nbroutingpeer := &netbirdiov1.NBRoutingPeer{}
-		var netbirdClient *netbird.Client
+		ozroutingpeer := &openzrov1.NBRoutingPeer{}
+		var openzroClient *openzro.Client
 		var mux *http.ServeMux
 		var server *httptest.Server
 		var controllerReconciler *NBRoutingPeerReconciler
@@ -45,35 +45,35 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 			ctrl.SetLogger(logr.New(GinkgoLogr.GetSink()))
 			mux = &http.ServeMux{}
 			server = httptest.NewServer(mux)
-			netbirdClient = netbird.New(server.URL, "ABC")
+			openzroClient = openzro.New(server.URL, "ABC")
 			controllerReconciler = &NBRoutingPeerReconciler{
 				Client:             k8sClient,
-				Netbird:            netbirdClient,
-				ClientImage:        "netbirdio/netbird:latest",
+				openZro:            openzroClient,
+				ClientImage:        "openzro/openzro:latest",
 				ClusterName:        "kubernetes",
 				DefaultLabels:      make(map[string]string),
 				NamespacedNetworks: false,
 			}
 
 			By("creating the custom resource for the Kind NBRoutingPeer")
-			err := k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)
+			err := k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)
 			if err != nil && errors.IsNotFound(err) {
-				nbroutingpeer = &netbirdiov1.NBRoutingPeer{
+				ozroutingpeer = &openzrov1.NBRoutingPeer{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       resourceName,
 						Namespace:  "default",
-						Finalizers: []string{"netbird.io/cleanup"},
+						Finalizers: []string{"openzro.io/cleanup"},
 					},
-					Spec: netbirdiov1.NBRoutingPeerSpec{
+					Spec: openzrov1.NBRoutingPeerSpec{
 						Replicas: util.Ptr(int32(0)),
 					},
 				}
-				Expect(k8sClient.Create(ctx, nbroutingpeer)).To(Succeed())
+				Expect(k8sClient.Create(ctx, ozroutingpeer)).To(Succeed())
 			}
 		})
 
 		AfterEach(func() {
-			resource := &netbirdiov1.NBRoutingPeer{}
+			resource := &openzrov1.NBRoutingPeer{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
@@ -89,7 +89,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 				}
 			}
 
-			group := &netbirdiov1.NBGroup{}
+			group := &openzrov1.NBGroup{}
 			err = k8sClient.Get(ctx, typeNamespacedName, group)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
@@ -137,17 +137,17 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 				}
 			}
 
-			nbresource := &netbirdiov1.NBResource{}
-			err = k8sClient.Get(ctx, typeNamespacedName, nbresource)
+			ozresource := &openzrov1.NBResource{}
+			err = k8sClient.Get(ctx, typeNamespacedName, ozresource)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
 
-				if len(nbresource.Finalizers) > 0 {
-					nbresource.Finalizers = nil
-					Expect(k8sClient.Update(ctx, nbresource)).To(Succeed())
+				if len(ozresource.Finalizers) > 0 {
+					ozresource.Finalizers = nil
+					Expect(k8sClient.Update(ctx, ozresource)).To(Succeed())
 				}
 
-				err = k8sClient.Delete(ctx, nbresource)
+				err = k8sClient.Delete(ctx, ozresource)
 				if !errors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
 				}
@@ -156,12 +156,12 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 
 		When("Network doesn't exist", func() {
 			BeforeEach(func() {
-				group := &netbirdiov1.NBGroup{
+				group := &openzrov1.NBGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      typeNamespacedName.Name,
 						Namespace: typeNamespacedName.Namespace,
 					},
-					Spec: netbirdiov1.NBGroupSpec{
+					Spec: openzrov1.NBGroupSpec{
 						Name: controllerReconciler.ClusterName,
 					},
 				}
@@ -201,9 +201,9 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 				Expect(err).NotTo(HaveOccurred())
 				Expect(networkCreated).To(BeTrue())
 
-				Expect(k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)).To(Succeed())
-				Expect(nbroutingpeer.Status.NetworkID).NotTo(BeNil())
-				Expect(*nbroutingpeer.Status.NetworkID).To(Equal("test"))
+				Expect(k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)).To(Succeed())
+				Expect(ozroutingpeer.Status.NetworkID).NotTo(BeNil())
+				Expect(*ozroutingpeer.Status.NetworkID).To(Equal("test"))
 			})
 		})
 		When("Network exists", func() {
@@ -225,17 +225,17 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 					}
 				})
 
-				nbroutingpeer.Status.NetworkID = util.Ptr("test")
-				Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+				ozroutingpeer.Status.NetworkID = util.Ptr("test")
+				Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 			})
 			Describe("Network Router changes", func() {
 				BeforeEach(func() {
-					group := &netbirdiov1.NBGroup{
+					group := &openzrov1.NBGroup{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      typeNamespacedName.Name,
 							Namespace: typeNamespacedName.Namespace,
 						},
-						Spec: netbirdiov1.NBGroupSpec{
+						Spec: openzrov1.NBGroupSpec{
 							Name: controllerReconciler.ClusterName,
 						},
 					}
@@ -244,8 +244,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 					group.Status.GroupID = util.Ptr("test")
 					Expect(k8sClient.Status().Update(ctx, group)).To(Succeed())
 
-					nbroutingpeer.Status.SetupKeyID = util.Ptr("skid")
-					Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+					ozroutingpeer.Status.SetupKeyID = util.Ptr("skid")
+					Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 					mux.HandleFunc("/api/setup-keys/skid", func(w http.ResponseWriter, r *http.Request) {
 						defer GinkgoRecover()
@@ -315,15 +315,15 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(routerCreated).To(BeTrue())
 
-						Expect(k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)).To(Succeed())
-						Expect(nbroutingpeer.Status.RouterID).NotTo(BeNil())
-						Expect(*nbroutingpeer.Status.RouterID).To(Equal("test"))
+						Expect(k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)).To(Succeed())
+						Expect(ozroutingpeer.Status.RouterID).NotTo(BeNil())
+						Expect(*ozroutingpeer.Status.RouterID).To(Equal("test"))
 					})
 				})
 				When("Network Router is out-of-date", func() {
 					It("should update network router", func() {
-						nbroutingpeer.Status.RouterID = util.Ptr("test")
-						Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+						ozroutingpeer.Status.RouterID = util.Ptr("test")
+						Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 						routerUpdated := false
 						mux.HandleFunc("/api/networks/test/routers", func(w http.ResponseWriter, r *http.Request) {
@@ -379,16 +379,16 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(routerUpdated).To(BeTrue())
 
-						Expect(k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)).To(Succeed())
-						Expect(nbroutingpeer.Status.RouterID).NotTo(BeNil())
-						Expect(*nbroutingpeer.Status.RouterID).To(Equal("test"))
+						Expect(k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)).To(Succeed())
+						Expect(ozroutingpeer.Status.RouterID).NotTo(BeNil())
+						Expect(*ozroutingpeer.Status.RouterID).To(Equal("test"))
 					})
 				})
 			})
 			When("Network Router exists", func() {
 				BeforeEach(func() {
-					nbroutingpeer.Status.RouterID = util.Ptr("test")
-					Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+					ozroutingpeer.Status.RouterID = util.Ptr("test")
+					Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 					mux.HandleFunc("/api/networks/test/routers", func(w http.ResponseWriter, r *http.Request) {
 						defer GinkgoRecover()
@@ -411,8 +411,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 				})
 				When("Group doesn't exist", func() {
 					BeforeEach(func() {
-						nbroutingpeer.Status.SetupKeyID = util.Ptr("skid")
-						Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+						ozroutingpeer.Status.SetupKeyID = util.Ptr("skid")
+						Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 						mux.HandleFunc("/api/setup-keys/skid", func(w http.ResponseWriter, r *http.Request) {
 							defer GinkgoRecover()
@@ -445,7 +445,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">", 0))
 
-						group := &netbirdiov1.NBGroup{}
+						group := &openzrov1.NBGroup{}
 						Expect(k8sClient.Get(ctx, typeNamespacedName, group)).To(Succeed())
 						Expect(group.Spec.Name).To(Equal(controllerReconciler.ClusterName))
 						Expect(group.Labels).To(HaveKeyWithValue("dog", "bark"))
@@ -461,13 +461,13 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 				})
 				When("Group exists", func() {
 					BeforeEach(func() {
-						group := &netbirdiov1.NBGroup{
+						group := &openzrov1.NBGroup{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:       typeNamespacedName.Name,
 								Namespace:  typeNamespacedName.Namespace,
-								Finalizers: []string{"netbird.io/routing-peer-cleanup", "netbird.io/group-cleanup"},
+								Finalizers: []string{"openzro.io/routing-peer-cleanup", "openzro.io/group-cleanup"},
 							},
-							Spec: netbirdiov1.NBGroupSpec{
+							Spec: openzrov1.NBGroupSpec{
 								Name: controllerReconciler.ClusterName,
 							},
 						}
@@ -573,8 +573,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 									}
 								})
 
-								nbroutingpeer.Status.SetupKeyID = util.Ptr("skid")
-								Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+								ozroutingpeer.Status.SetupKeyID = util.Ptr("skid")
+								Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 								res, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 									NamespacedName: typeNamespacedName,
@@ -647,8 +647,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 									}
 								})
 
-								nbroutingpeer.Status.SetupKeyID = util.Ptr("skid")
-								Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+								ozroutingpeer.Status.SetupKeyID = util.Ptr("skid")
+								Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 								secret := &corev1.Secret{
 									ObjectMeta: metav1.ObjectMeta{
@@ -727,8 +727,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 									}
 								})
 
-								nbroutingpeer.Status.SetupKeyID = util.Ptr("skid")
-								Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+								ozroutingpeer.Status.SetupKeyID = util.Ptr("skid")
+								Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 								secret := &corev1.Secret{
 									ObjectMeta: metav1.ObjectMeta{
@@ -782,8 +782,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 									}
 								})
 
-								nbroutingpeer.Status.SetupKeyID = util.Ptr("skid")
-								Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+								ozroutingpeer.Status.SetupKeyID = util.Ptr("skid")
+								Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 								secret := &corev1.Secret{
 									ObjectMeta: metav1.ObjectMeta{
@@ -812,8 +812,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 					})
 					Describe("Deployment Behavior", func() {
 						BeforeEach(func() {
-							nbroutingpeer.Status.SetupKeyID = util.Ptr("skid")
-							Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+							ozroutingpeer.Status.SetupKeyID = util.Ptr("skid")
+							Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 							mux.HandleFunc("/api/setup-keys/skid", func(w http.ResponseWriter, r *http.Request) {
 								defer GinkgoRecover()
@@ -917,9 +917,9 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 
 						When("Privileged mode is enabled", func() {
 							It("should create deployment with privileged security context", func() {
-								Expect(k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)).To(Succeed())
-								nbroutingpeer.Spec.Privileged = util.Ptr(true)
-								Expect(k8sClient.Update(ctx, nbroutingpeer)).To(Succeed())
+								Expect(k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)).To(Succeed())
+								ozroutingpeer.Spec.Privileged = util.Ptr(true)
+								Expect(k8sClient.Update(ctx, ozroutingpeer)).To(Succeed())
 
 								_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 									NamespacedName: typeNamespacedName,
@@ -941,9 +941,9 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 
 						When("Privileged mode is disabled", func() {
 							It("should create deployment with non-privileged security context", func() {
-								Expect(k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)).To(Succeed())
-								nbroutingpeer.Spec.Privileged = util.Ptr(false)
-								Expect(k8sClient.Update(ctx, nbroutingpeer)).To(Succeed())
+								Expect(k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)).To(Succeed())
+								ozroutingpeer.Spec.Privileged = util.Ptr(false)
+								Expect(k8sClient.Update(ctx, ozroutingpeer)).To(Succeed())
 
 								_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 									NamespacedName: typeNamespacedName,
@@ -965,9 +965,9 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						When("Privileged mode is not specified", func() {
 							It("should create deployment with default security context (non-privileged)", func() {
 								// Ensure Privileged is nil (default)
-								Expect(k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)).To(Succeed())
-								nbroutingpeer.Spec.Privileged = nil
-								Expect(k8sClient.Update(ctx, nbroutingpeer)).To(Succeed())
+								Expect(k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)).To(Succeed())
+								ozroutingpeer.Spec.Privileged = nil
+								Expect(k8sClient.Update(ctx, ozroutingpeer)).To(Succeed())
 
 								_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 									NamespacedName: typeNamespacedName,
@@ -1001,9 +1001,9 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 								Expect(container.SecurityContext.Privileged).To(BeNil())
 
 								// Enable privileged mode
-								Expect(k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)).To(Succeed())
-								nbroutingpeer.Spec.Privileged = util.Ptr(true)
-								Expect(k8sClient.Update(ctx, nbroutingpeer)).To(Succeed())
+								Expect(k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)).To(Succeed())
+								ozroutingpeer.Spec.Privileged = util.Ptr(true)
+								Expect(k8sClient.Update(ctx, ozroutingpeer)).To(Succeed())
 
 								_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 									NamespacedName: typeNamespacedName,
@@ -1020,8 +1020,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 
 							It("should update deployment security context when privileged mode is disabled", func() {
 								// First create deployment with privileged mode enabled
-								nbroutingpeer.Spec.Privileged = util.Ptr(true)
-								Expect(k8sClient.Update(ctx, nbroutingpeer)).To(Succeed())
+								ozroutingpeer.Spec.Privileged = util.Ptr(true)
+								Expect(k8sClient.Update(ctx, ozroutingpeer)).To(Succeed())
 
 								_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 									NamespacedName: typeNamespacedName,
@@ -1036,9 +1036,9 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 								Expect(*container.SecurityContext.Privileged).To(BeTrue())
 
 								// Disable privileged mode
-								Expect(k8sClient.Get(ctx, typeNamespacedName, nbroutingpeer)).To(Succeed())
-								nbroutingpeer.Spec.Privileged = util.Ptr(false)
-								Expect(k8sClient.Update(ctx, nbroutingpeer)).To(Succeed())
+								Expect(k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)).To(Succeed())
+								ozroutingpeer.Spec.Privileged = util.Ptr(false)
+								Expect(k8sClient.Update(ctx, ozroutingpeer)).To(Succeed())
 
 								_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 									NamespacedName: typeNamespacedName,
@@ -1057,8 +1057,8 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						networkDeleted := false
 						BeforeEach(func() {
 							networkDeleted = false
-							nbroutingpeer.Status.SetupKeyID = util.Ptr("skid")
-							Expect(k8sClient.Status().Update(ctx, nbroutingpeer)).To(Succeed())
+							ozroutingpeer.Status.SetupKeyID = util.Ptr("skid")
+							Expect(k8sClient.Status().Update(ctx, ozroutingpeer)).To(Succeed())
 
 							mux.HandleFunc("/api/setup-keys/skid", func(w http.ResponseWriter, r *http.Request) {
 								defer GinkgoRecover()
@@ -1097,18 +1097,18 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						})
 
 						It("should remove finalizer from NBGroup", func() {
-							Expect(k8sClient.Delete(ctx, nbroutingpeer)).To(Succeed())
+							Expect(k8sClient.Delete(ctx, ozroutingpeer)).To(Succeed())
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							group := &netbirdiov1.NBGroup{}
+							group := &openzrov1.NBGroup{}
 							Expect(k8sClient.Get(ctx, typeNamespacedName, group)).To(Succeed())
-							Expect(group.Finalizers).NotTo(ContainElement("netbird.io/routing-peer-cleanup"))
+							Expect(group.Finalizers).NotTo(ContainElement("openzro.io/routing-peer-cleanup"))
 						})
 
 						It("should delete Network Router", func() {
-							Expect(k8sClient.Delete(ctx, nbroutingpeer)).To(Succeed())
+							Expect(k8sClient.Delete(ctx, ozroutingpeer)).To(Succeed())
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
@@ -1117,7 +1117,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						})
 
 						It("should delete Network", func() {
-							Expect(k8sClient.Delete(ctx, nbroutingpeer)).To(Succeed())
+							Expect(k8sClient.Delete(ctx, ozroutingpeer)).To(Succeed())
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
@@ -1126,7 +1126,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						})
 
 						It("should delete deployment", func() {
-							Expect(k8sClient.Delete(ctx, nbroutingpeer)).To(Succeed())
+							Expect(k8sClient.Delete(ctx, ozroutingpeer)).To(Succeed())
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
@@ -1137,25 +1137,25 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						})
 
 						It("should delete any hanging NBResources", func() {
-							nbResource := &netbirdiov1.NBResource{
+							nbResource := &openzrov1.NBResource{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      typeNamespacedName.Name,
 									Namespace: typeNamespacedName.Namespace,
 								},
-								Spec: netbirdiov1.NBResourceSpec{
+								Spec: openzrov1.NBResourceSpec{
 									Name:      "test",
-									NetworkID: *nbroutingpeer.Status.NetworkID,
+									NetworkID: *ozroutingpeer.Status.NetworkID,
 									Address:   "test",
 									Groups:    []string{"grp"},
 								},
 							}
 							Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
-							Expect(k8sClient.Delete(ctx, nbroutingpeer)).To(Succeed())
+							Expect(k8sClient.Delete(ctx, ozroutingpeer)).To(Succeed())
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							nbResource = &netbirdiov1.NBResource{}
+							nbResource = &openzrov1.NBResource{}
 							err = k8sClient.Get(ctx, typeNamespacedName, nbResource)
 							Expect(errors.IsNotFound(err)).To(BeTrue())
 						})

@@ -27,7 +27,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
 )
 
 var _ = Describe("NBSetupKey Controller", func() {
@@ -40,18 +40,18 @@ var _ = Describe("NBSetupKey Controller", func() {
 			Name:      resourceName,
 			Namespace: "default",
 		}
-		nbsetupkey := &netbirdiov1.NBSetupKey{}
+		ozsetupkey := &openzrov1.NBSetupKey{}
 		secret := &v1.Secret{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind NBSetupKey")
-			err := k8sClient.Get(ctx, typeNamespacedName, nbsetupkey)
-			resource := &netbirdiov1.NBSetupKey{
+			err := k8sClient.Get(ctx, typeNamespacedName, ozsetupkey)
+			resource := &openzrov1.NBSetupKey{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: "default",
 				},
-				Spec: netbirdiov1.NBSetupKeySpec{
+				Spec: openzrov1.NBSetupKeySpec{
 					SecretKeyRef: v1.SecretKeySelector{
 						LocalObjectReference: v1.LocalObjectReference{
 							Name: resourceName,
@@ -61,13 +61,13 @@ var _ = Describe("NBSetupKey Controller", func() {
 				},
 			}
 			if err == nil {
-				Expect(k8sClient.Delete(ctx, nbsetupkey)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, ozsetupkey)).To(Succeed())
 			}
 			Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			resource := &netbirdiov1.NBSetupKey{}
+			resource := &openzrov1.NBSetupKey{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -87,13 +87,13 @@ var _ = Describe("NBSetupKey Controller", func() {
 				})
 				Expect(err).NotTo(HaveOccurred())
 
-				err = k8sClient.Get(ctx, typeNamespacedName, nbsetupkey)
+				err = k8sClient.Get(ctx, typeNamespacedName, ozsetupkey)
 				Expect(err).NotTo(HaveOccurred())
 
-				Expect(nbsetupkey.Status.Conditions).NotTo(BeNil())
-				Expect(nbsetupkey.Status.Conditions).To(HaveLen(1))
-				Expect(nbsetupkey.Status.Conditions[0].Status).To(Equal(v1.ConditionFalse))
-				Expect(nbsetupkey.Status.Conditions[0].Reason).To(Equal("SecretNotExists"))
+				Expect(ozsetupkey.Status.Conditions).NotTo(BeNil())
+				Expect(ozsetupkey.Status.Conditions).To(HaveLen(1))
+				Expect(ozsetupkey.Status.Conditions[0].Status).To(Equal(v1.ConditionFalse))
+				Expect(ozsetupkey.Status.Conditions[0].Reason).To(Equal("SecretNotExists"))
 				Expect(controllerReconciler.ReferencedSecrets).To(HaveKey("default/test-resource"))
 			})
 		})
@@ -132,13 +132,13 @@ var _ = Describe("NBSetupKey Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					err = k8sClient.Get(ctx, typeNamespacedName, nbsetupkey)
+					err = k8sClient.Get(ctx, typeNamespacedName, ozsetupkey)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(nbsetupkey.Status.Conditions).NotTo(BeNil())
-					Expect(nbsetupkey.Status.Conditions).To(HaveLen(1))
-					Expect(nbsetupkey.Status.Conditions[0].Status).To(Equal(v1.ConditionFalse))
-					Expect(nbsetupkey.Status.Conditions[0].Reason).To(Equal("InvalidSetupKey"))
+					Expect(ozsetupkey.Status.Conditions).NotTo(BeNil())
+					Expect(ozsetupkey.Status.Conditions).To(HaveLen(1))
+					Expect(ozsetupkey.Status.Conditions[0].Status).To(Equal(v1.ConditionFalse))
+					Expect(ozsetupkey.Status.Conditions[0].Reason).To(Equal("InvalidSetupKey"))
 					Expect(controllerReconciler.ReferencedSecrets).To(HaveKey("default/test-resource"))
 				})
 			})
@@ -157,13 +157,13 @@ var _ = Describe("NBSetupKey Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					err = k8sClient.Get(ctx, typeNamespacedName, nbsetupkey)
+					err = k8sClient.Get(ctx, typeNamespacedName, ozsetupkey)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(nbsetupkey.Status.Conditions).NotTo(BeNil())
-					Expect(nbsetupkey.Status.Conditions).To(HaveLen(1))
-					Expect(nbsetupkey.Status.Conditions[0].Status).To(Equal(v1.ConditionFalse))
-					Expect(nbsetupkey.Status.Conditions[0].Reason).To(Equal("SecretKeyNotExists"))
+					Expect(ozsetupkey.Status.Conditions).NotTo(BeNil())
+					Expect(ozsetupkey.Status.Conditions).To(HaveLen(1))
+					Expect(ozsetupkey.Status.Conditions[0].Status).To(Equal(v1.ConditionFalse))
+					Expect(ozsetupkey.Status.Conditions[0].Reason).To(Equal("SecretKeyNotExists"))
 					Expect(controllerReconciler.ReferencedSecrets).To(HaveKey("default/test-resource"))
 				})
 			})
@@ -182,12 +182,12 @@ var _ = Describe("NBSetupKey Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					err = k8sClient.Get(ctx, typeNamespacedName, nbsetupkey)
+					err = k8sClient.Get(ctx, typeNamespacedName, ozsetupkey)
 					Expect(err).NotTo(HaveOccurred())
 
-					Expect(nbsetupkey.Status.Conditions).NotTo(BeNil())
-					Expect(nbsetupkey.Status.Conditions).To(HaveLen(1))
-					Expect(nbsetupkey.Status.Conditions[0].Status).To(Equal(v1.ConditionTrue))
+					Expect(ozsetupkey.Status.Conditions).NotTo(BeNil())
+					Expect(ozsetupkey.Status.Conditions).To(HaveLen(1))
+					Expect(ozsetupkey.Status.Conditions[0].Status).To(Equal(v1.ConditionTrue))
 					Expect(controllerReconciler.ReferencedSecrets).To(HaveKey("default/test-resource"))
 				})
 			})

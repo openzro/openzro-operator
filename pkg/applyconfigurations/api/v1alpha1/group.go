@@ -26,7 +26,7 @@ func Group(name, namespace string) *GroupApplyConfiguration {
 	b.WithName(name)
 	b.WithNamespace(namespace)
 	b.WithKind("Group")
-	b.WithAPIVersion("netbird.io/v1alpha1")
+	b.WithAPIVersion("openzro.io/v1alpha1")
 	return b
 }
 

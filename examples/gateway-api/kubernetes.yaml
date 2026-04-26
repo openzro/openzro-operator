@@ -6,7 +6,7 @@ metadata:
 spec:
   parentRefs:
   - name: private
-    namespace: netbird
+    namespace: openzro
   rules:
   - backendRefs:
     - name: kubernetes

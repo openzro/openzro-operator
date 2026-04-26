@@ -7,29 +7,29 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	"github.com/netbirdio/kubernetes-operator/internal/util"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	"github.com/openzro/openzro-operator/internal/util"
 )
 
 // NBGroupReconciler reconciles a NBGroup object
 type NBGroupReconciler struct {
 	client.Client
 
-	Netbird *netbird.Client
+	openZro *openzro.Client
 }
 
 const (
 	// defaultRequeueAfter default requeue duration
 	// due to controller-runtime limitations, sync periods may reach up to 10 hours if no changes are detected
 	// in watched resources.
-	// This may cause issues when NetBird-side resources are out-of-sync and need to be reconciled, this is a temporary
-	// fix to this issue by syncing with NetBird more frequently.
+	// This may cause issues when openZro-side resources are out-of-sync and need to be reconciled, this is a temporary
+	// fix to this issue by syncing with openZro more frequently.
 	defaultRequeueAfter = 15 * time.Minute
 )
 
@@ -39,7 +39,7 @@ func (r *NBGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	logger := ctrl.Log.WithName("NBGroup").WithValues("namespace", req.Namespace, "name", req.Name)
 	logger.Info("Reconciling NBGroup")
 
-	nbGroup := netbirdiov1.NBGroup{}
+	nbGroup := openzrov1.NBGroup{}
 	err = r.Client.Get(ctx, req.NamespacedName, &nbGroup)
 	if err != nil {
 		if !errors.IsNotFound(err) {
@@ -74,15 +74,15 @@ func (r *NBGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, r.handleDelete(ctx, nbGroup, logger)
 	}
 
-	return r.syncNetBirdGroup(ctx, &nbGroup, logger)
+	return r.syncopenZroGroup(ctx, &nbGroup, logger)
 }
 
-// syncNetBirdGroup reconciliation logic for non-deleted objects.
-func (r *NBGroupReconciler) syncNetBirdGroup(ctx context.Context, nbGroup *netbirdiov1.NBGroup, logger logr.Logger) (ctrl.Result, error) {
-	// Get all NetBird groups to ensure no group duplication
-	groups, err := r.Netbird.Groups.List(ctx)
+// syncopenZroGroup reconciliation logic for non-deleted objects.
+func (r *NBGroupReconciler) syncopenZroGroup(ctx context.Context, nbGroup *openzrov1.NBGroup, logger logr.Logger) (ctrl.Result, error) {
+	// Get all openZro groups to ensure no group duplication
+	groups, err := r.openZro.Groups.List(ctx)
 	if err != nil {
-		logger.Error(errNetBirdAPI, "error listing groups", "err", err)
+		logger.Error(erropenZroAPI, "error listing groups", "err", err)
 		return ctrl.Result{}, err
 	}
 	var group *api.Group
@@ -94,45 +94,45 @@ func (r *NBGroupReconciler) syncNetBirdGroup(ctx context.Context, nbGroup *netbi
 
 	// Create group if not exists, and update status.groupId
 	if nbGroup.Status.GroupID == nil && group == nil {
-		logger.Info("NBGroup: Creating group on NetBird", "name", nbGroup.Spec.Name)
-		group, err := r.Netbird.Groups.Create(ctx, api.GroupRequest{
+		logger.Info("NBGroup: Creating group on openZro", "name", nbGroup.Spec.Name)
+		group, err := r.openZro.Groups.Create(ctx, api.GroupRequest{
 			Name: nbGroup.Spec.Name,
 		})
 		if err != nil {
-			nbGroup.Status.Conditions = netbirdiov1.NBConditionFalse("APIError", fmt.Sprintf("NetBird API Error: %v", err))
-			logger.Error(errNetBirdAPI, "error creating group", "err", err)
+			nbGroup.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("openZro API Error: %v", err))
+			logger.Error(erropenZroAPI, "error creating group", "err", err)
 			return ctrl.Result{}, err
 		}
 
-		logger.Info("NBGroup: Created group on NetBird", "name", nbGroup.Spec.Name, "id", group.Id)
+		logger.Info("NBGroup: Created group on openZro", "name", nbGroup.Spec.Name, "id", group.Id)
 		nbGroup.Status.GroupID = &group.Id
-		nbGroup.Status.Conditions = netbirdiov1.NBConditionTrue()
+		nbGroup.Status.Conditions = openzrov1.NBConditionTrue()
 	} else if nbGroup.Status.GroupID == nil && group != nil {
-		logger.Info("NBGroup: Found group with same name on NetBird", "name", nbGroup.Spec.Name, "id", group.Id)
+		logger.Info("NBGroup: Found group with same name on openZro", "name", nbGroup.Spec.Name, "id", group.Id)
 		nbGroup.Status.GroupID = &group.Id
-		nbGroup.Status.Conditions = netbirdiov1.NBConditionTrue()
+		nbGroup.Status.Conditions = openzrov1.NBConditionTrue()
 	} else if group == nil {
 		logger.Info("NBGroup: Group was deleted", "name", nbGroup.Spec.Name, "id", *nbGroup.Status.GroupID)
 		nbGroup.Status.GroupID = nil
-		nbGroup.Status.Conditions = netbirdiov1.NBConditionFalse("GroupGone", "Group was deleted from NetBird API")
+		nbGroup.Status.Conditions = openzrov1.NBConditionFalse("GroupGone", "Group was deleted from openZro API")
 		return ctrl.Result{Requeue: true}, nil
 	} else {
-		nbGroup.Status.Conditions = netbirdiov1.NBConditionTrue()
+		nbGroup.Status.Conditions = openzrov1.NBConditionTrue()
 	}
 
 	if nbGroup.Status.GroupID != nil && group != nil && *nbGroup.Status.GroupID != group.Id {
-		// There are two possibilities here, either someone deleted and created the group in NetBird, thus the changed ID
+		// There are two possibilities here, either someone deleted and created the group in openZro, thus the changed ID
 		// Or there's a conflict with something else, either way, we just need to take the new ID here
 		nbGroup.Status.GroupID = &group.Id
-		nbGroup.Status.Conditions = netbirdiov1.NBConditionTrue()
+		nbGroup.Status.Conditions = openzrov1.NBConditionTrue()
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup netbirdiov1.NBGroup, logger logr.Logger) error {
-	// Group doesn't exist on NetBird, no need for cleanup
+func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup openzrov1.NBGroup, logger logr.Logger) error {
+	// Group doesn't exist on openZro, no need for cleanup
 	if nbGroup.Status.GroupID == nil {
-		nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "netbird.io/group-cleanup")
+		nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "openzro.io/group-cleanup")
 		err := r.Client.Update(ctx, &nbGroup)
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error updating NBGroup", "err", err)
@@ -142,16 +142,16 @@ func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup netbirdiov
 		return nil
 	}
 
-	err := r.Netbird.Groups.Delete(ctx, *nbGroup.Status.GroupID)
+	err := r.openZro.Groups.Delete(ctx, *nbGroup.Status.GroupID)
 	if err != nil && !strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "linked") {
-		logger.Error(errNetBirdAPI, "error deleting group", "err", err)
+		logger.Error(erropenZroAPI, "error deleting group", "err", err)
 		return err
 	}
 
 	if err != nil && strings.Contains(err.Error(), "linked") && !nbGroup.DeletionTimestamp.Add(time.Minute).Before(time.Now()) {
-		logger.Info("group still linked to resources on netbird", "err", err)
+		logger.Info("group still linked to resources on openzro", "err", err)
 		// Check if group is defined elsewhere in the cluster
-		var groups netbirdiov1.NBGroupList
+		var groups openzrov1.NBGroupList
 		listErr := r.Client.List(ctx, &groups)
 		if listErr != nil {
 			logger.Error(errKubernetesAPI, "error listing NBGroups", "err", listErr)
@@ -164,7 +164,7 @@ func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup netbirdiov
 			if v.Status.GroupID != nil && nbGroup.Status.GroupID != nil && *v.Status.GroupID == *nbGroup.Status.GroupID {
 				// Same group, multiple resources
 				logger.Info("group exists in another namespace", "namespace", v.Namespace, "name", v.Name)
-				nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "netbird.io/group-cleanup")
+				nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "openzro.io/group-cleanup")
 				err = r.Client.Update(ctx, &nbGroup)
 				if err != nil {
 					logger.Error(errKubernetesAPI, "error updating NBGroup", "err", err)
@@ -179,7 +179,7 @@ func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup netbirdiov
 		return err
 	}
 
-	nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "netbird.io/group-cleanup")
+	nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "openzro.io/group-cleanup")
 	err = r.Client.Update(ctx, &nbGroup)
 	if err != nil {
 		logger.Error(errKubernetesAPI, "error updating NBGroup", "err", err)
@@ -192,7 +192,7 @@ func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup netbirdiov
 // SetupWithManager sets up the controller with the Manager.
 func (r *NBGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&netbirdiov1.NBGroup{}).
-		Named("nbgroup").
+		For(&openzrov1.NBGroup{}).
+		Named("ozgroup").
 		Complete(r)
 }

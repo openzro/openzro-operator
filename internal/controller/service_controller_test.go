@@ -1,8 +1,8 @@
 package controller
 
 import (
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	"github.com/netbirdio/kubernetes-operator/internal/util"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	"github.com/openzro/openzro-operator/internal/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -85,21 +85,21 @@ var _ = Describe("Service Controller", func() {
 				}
 			}
 
-			nbrp := &netbirdiov1.NBRoutingPeer{}
-			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router"}, nbrp)
+			ozrp := &openzrov1.NBRoutingPeer{}
+			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router"}, ozrp)
 			if !errors.IsNotFound(err) {
-				if len(nbrp.Finalizers) > 0 {
-					nbrp.Finalizers = nil
-					Expect(k8sClient.Update(ctx, nbrp)).To(Succeed())
+				if len(ozrp.Finalizers) > 0 {
+					ozrp.Finalizers = nil
+					Expect(k8sClient.Update(ctx, ozrp)).To(Succeed())
 				}
 
-				err := k8sClient.Delete(ctx, nbrp)
+				err := k8sClient.Delete(ctx, ozrp)
 				if !errors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
 				}
 			}
 
-			nbResource := &netbirdiov1.NBResource{}
+			nbResource := &openzrov1.NBResource{}
 			err = k8sClient.Get(ctx, typeNamespacedName, nbResource)
 			if !errors.IsNotFound(err) {
 				if len(nbResource.Finalizers) > 0 {
@@ -123,7 +123,7 @@ var _ = Describe("Service Controller", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, typeNamespacedName, service)).To(Succeed())
 					Expect(service.Finalizers).To(BeEmpty())
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).NotTo(Succeed())
 				})
 			})
@@ -142,16 +142,16 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(res.RequeueAfter).NotTo(BeZero())
-					nbrp := &netbirdiov1.NBRoutingPeer{}
-					Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: typeNamespacedName.Namespace, Name: "router"}, nbrp)).To(Succeed())
-					Expect(nbrp.Labels).To(HaveKeyWithValue("dog", "bark"))
+					ozrp := &openzrov1.NBRoutingPeer{}
+					Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: typeNamespacedName.Namespace, Name: "router"}, ozrp)).To(Succeed())
+					Expect(ozrp.Labels).To(HaveKeyWithValue("dog", "bark"))
 					res, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 						NamespacedName: typeNamespacedName,
 					})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(res.RequeueAfter).NotTo(BeZero())
-					nbrp.Status.NetworkID = util.Ptr(policyName)
-					Expect(k8sClient.Status().Update(ctx, nbrp)).To(Succeed())
+					ozrp.Status.NetworkID = util.Ptr(policyName)
+					Expect(k8sClient.Status().Update(ctx, ozrp)).To(Succeed())
 					res, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
 						NamespacedName: typeNamespacedName,
 					})
@@ -161,17 +161,17 @@ var _ = Describe("Service Controller", func() {
 			})
 			When("NBRoutingPeer exists", func() {
 				BeforeEach(func() {
-					nbrp := &netbirdiov1.NBRoutingPeer{
+					ozrp := &openzrov1.NBRoutingPeer{
 						ObjectMeta: v1.ObjectMeta{
 							Namespace: typeNamespacedName.Namespace,
 							Name:      "router",
 						},
-						Spec: netbirdiov1.NBRoutingPeerSpec{},
+						Spec: openzrov1.NBRoutingPeerSpec{},
 					}
-					Expect(k8sClient.Create(ctx, nbrp)).To(Succeed())
+					Expect(k8sClient.Create(ctx, ozrp)).To(Succeed())
 
-					nbrp.Status.NetworkID = util.Ptr(policyName)
-					Expect(k8sClient.Status().Update(ctx, nbrp)).To(Succeed())
+					ozrp.Status.NetworkID = util.Ptr(policyName)
+					Expect(k8sClient.Status().Update(ctx, ozrp)).To(Succeed())
 				})
 				When("Service should be exposed", func() {
 					BeforeEach(func() {
@@ -187,7 +187,7 @@ var _ = Describe("Service Controller", func() {
 						})
 						Expect(err).NotTo(HaveOccurred())
 						Expect(k8sClient.Get(ctx, typeNamespacedName, service)).To(Succeed())
-						Expect(service.Finalizers).To(ContainElement("netbird.io/cleanup"))
+						Expect(service.Finalizers).To(ContainElement("openzro.io/cleanup"))
 					})
 					When("nothing else is specified", func() {
 						It("should create NBResource with default values", func() {
@@ -195,7 +195,7 @@ var _ = Describe("Service Controller", func() {
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							nbResource := &netbirdiov1.NBResource{}
+							nbResource := &openzrov1.NBResource{}
 							Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 							Expect(nbResource.Spec.Address).To(Equal(typeNamespacedName.Name + "." + typeNamespacedName.Namespace + "." + controllerReconciler.ClusterDNS))
 							Expect(nbResource.Spec.Groups).To(ConsistOf([]string{controllerReconciler.ClusterName + "-" + typeNamespacedName.Namespace + "-" + typeNamespacedName.Name}))
@@ -218,7 +218,7 @@ var _ = Describe("Service Controller", func() {
 									NamespacedName: typeNamespacedName,
 								})
 								Expect(err).NotTo(HaveOccurred())
-								nbResource := &netbirdiov1.NBResource{}
+								nbResource := &openzrov1.NBResource{}
 								Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 								Expect(nbResource.Spec.PolicyName).To(Equal(policyName))
 								Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{443, 80}))
@@ -234,7 +234,7 @@ var _ = Describe("Service Controller", func() {
 									NamespacedName: typeNamespacedName,
 								})
 								Expect(err).NotTo(HaveOccurred())
-								nbResource := &netbirdiov1.NBResource{}
+								nbResource := &openzrov1.NBResource{}
 								Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 								Expect(nbResource.Spec.PolicyName).To(Equal(policyName))
 								Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{80}))
@@ -250,7 +250,7 @@ var _ = Describe("Service Controller", func() {
 									NamespacedName: typeNamespacedName,
 								})
 								Expect(err).NotTo(HaveOccurred())
-								nbResource := &netbirdiov1.NBResource{}
+								nbResource := &openzrov1.NBResource{}
 								Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 								Expect(nbResource.Spec.PolicyName).To(Equal(policyName))
 								Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{80, 443}))
@@ -266,7 +266,7 @@ var _ = Describe("Service Controller", func() {
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							nbResource := &netbirdiov1.NBResource{}
+							nbResource := &openzrov1.NBResource{}
 							Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 							Expect(nbResource.Spec.Name).To(Equal("meow"))
 						})
@@ -279,7 +279,7 @@ var _ = Describe("Service Controller", func() {
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							nbResource := &netbirdiov1.NBResource{}
+							nbResource := &openzrov1.NBResource{}
 							Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 							Expect(nbResource.Spec.Groups).To(ConsistOf([]string{"meow", "wow", policyName}))
 						})
@@ -289,12 +289,12 @@ var _ = Describe("Service Controller", func() {
 		})
 		When("Service is already exposed", func() {
 			BeforeEach(func() {
-				nbResource := &netbirdiov1.NBResource{
+				nbResource := &openzrov1.NBResource{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      typeNamespacedName.Name,
 						Namespace: typeNamespacedName.Namespace,
 					},
-					Spec: netbirdiov1.NBResourceSpec{
+					Spec: openzrov1.NBResourceSpec{
 						Name:      typeNamespacedName.Namespace + "-" + typeNamespacedName.Name,
 						Address:   typeNamespacedName.Name + "." + typeNamespacedName.Namespace + "." + controllerReconciler.ClusterDNS,
 						Groups:    []string{controllerReconciler.ClusterName + "-" + typeNamespacedName.Namespace + "-" + typeNamespacedName.Name},
@@ -309,17 +309,17 @@ var _ = Describe("Service Controller", func() {
 				service.Annotations[ServiceExposeAnnotation] = "true"
 				Expect(k8sClient.Update(ctx, service)).To(Succeed())
 
-				nbrp := &netbirdiov1.NBRoutingPeer{
+				ozrp := &openzrov1.NBRoutingPeer{
 					ObjectMeta: v1.ObjectMeta{
 						Namespace: typeNamespacedName.Namespace,
 						Name:      "router",
 					},
-					Spec: netbirdiov1.NBRoutingPeerSpec{},
+					Spec: openzrov1.NBRoutingPeerSpec{},
 				}
-				Expect(k8sClient.Create(ctx, nbrp)).To(Succeed())
+				Expect(k8sClient.Create(ctx, ozrp)).To(Succeed())
 
-				nbrp.Status.NetworkID = util.Ptr(policyName)
-				Expect(k8sClient.Status().Update(ctx, nbrp)).To(Succeed())
+				ozrp.Status.NetworkID = util.Ptr(policyName)
+				Expect(k8sClient.Status().Update(ctx, ozrp)).To(Succeed())
 			})
 
 			When("Service should not be exposed", func() {
@@ -332,7 +332,7 @@ var _ = Describe("Service Controller", func() {
 						NamespacedName: typeNamespacedName,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					err = k8sClient.Get(ctx, typeNamespacedName, nbResource)
 					if !errors.IsNotFound(err) {
 						Expect(nbResource.DeletionTimestamp).NotTo(BeNil())
@@ -344,12 +344,12 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, typeNamespacedName, service)).To(Succeed())
-					Expect(service.Finalizers).NotTo(ContainElement("netbird.io/cleanup"))
+					Expect(service.Finalizers).NotTo(ContainElement("openzro.io/cleanup"))
 				})
 			})
 			When("Nothing changes", func() {
 				It("should do nothing", func() {
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					resourceVersion := nbResource.ResourceVersion
 
@@ -358,7 +358,7 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &netbirdiov1.NBResource{}
+					nbResource = &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(resourceVersion).To(BeEquivalentTo(nbResource.ResourceVersion))
 				})
@@ -372,14 +372,14 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.PolicyName).To(Equal(policyName))
 				})
 			})
 			When("policy is removed", func() {
 				It("should remove policy in NBResource spec", func() {
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					Expect(k8sClient.Update(ctx, nbResource)).To(Succeed())
@@ -389,14 +389,14 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &netbirdiov1.NBResource{}
+					nbResource = &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.PolicyName).To(Equal(""))
 				})
 			})
 			When("policy ports changes", func() {
 				It("should update ports in NBResource spec", func() {
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					nbResource.Spec.TCPPorts = []int32{443, 80}
@@ -412,7 +412,7 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &netbirdiov1.NBResource{}
+					nbResource = &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{80}))
 					Expect(nbResource.Spec.UDPPorts).To(ConsistOf([]int32{80}))
@@ -420,7 +420,7 @@ var _ = Describe("Service Controller", func() {
 			})
 			When("policy protocol changes", func() {
 				It("should update protocol in NBResource spec", func() {
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					nbResource.Spec.TCPPorts = []int32{443, 80}
@@ -436,7 +436,7 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &netbirdiov1.NBResource{}
+					nbResource = &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{80, 443}))
 					Expect(nbResource.Spec.UDPPorts).To(BeEmpty())
@@ -444,7 +444,7 @@ var _ = Describe("Service Controller", func() {
 			})
 			When("policy friendly name changes", func() {
 				It("should update policy friendly name in NBResource spec", func() {
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					Expect(k8sClient.Update(ctx, nbResource)).To(Succeed())
@@ -458,14 +458,14 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &netbirdiov1.NBResource{}
+					nbResource = &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.PolicyFriendlyName).To(BeEquivalentTo(map[string]string{"test": "toast", "meow": "meow"}))
 				})
 			})
 			When("policy source groups changes", func() {
 				It("should update policy source groups in NBResource spec", func() {
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					Expect(k8sClient.Update(ctx, nbResource)).To(Succeed())
@@ -479,7 +479,7 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &netbirdiov1.NBResource{}
+					nbResource = &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.PolicySourceGroups).To(BeEquivalentTo([]string{"test"}))
 				})
@@ -493,7 +493,7 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.Name).To(Equal("meow"))
 				})
@@ -507,7 +507,7 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource := &netbirdiov1.NBResource{}
+					nbResource := &openzrov1.NBResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.Groups).To(ConsistOf([]string{"a7medmo7sen", "pewpewpew"}))
 				})

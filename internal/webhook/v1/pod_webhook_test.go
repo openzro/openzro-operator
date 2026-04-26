@@ -19,8 +19,8 @@ package v1
 import (
 	"context"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
@@ -30,7 +30,7 @@ import (
 var _ = Describe("Pod Webhook", func() {
 	var (
 		obj       *corev1.Pod
-		defaulter PodNetbirdInjector
+		defaulter PodopenZroInjector
 	)
 
 	BeforeEach(func() {
@@ -48,10 +48,10 @@ var _ = Describe("Pod Webhook", func() {
 				},
 			},
 		}
-		defaulter = PodNetbirdInjector{
+		defaulter = PodopenZroInjector{
 			client:        k8sClient,
-			managementURL: "https://api.netbird.io",
-			clientImage:   "netbirdio/netbird:latest",
+			managementURL: "https://api.openzro.io",
+			clientImage:   "openzro/openzro:latest",
 		}
 		Expect(defaulter).NotTo(BeNil(), "Expected defaulter to be initialized")
 		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
@@ -82,12 +82,12 @@ var _ = Describe("Pod Webhook", func() {
 
 		When("NBSetupKey exists", Ordered, func() {
 			BeforeAll(func() {
-				sk := netbirdiov1.NBSetupKey{
+				sk := openzrov1.NBSetupKey{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
 					},
-					Spec: netbirdiov1.NBSetupKeySpec{
+					Spec: openzrov1.NBSetupKeySpec{
 						SecretKeyRef: corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "test",
@@ -107,10 +107,10 @@ var _ = Describe("Pod Webhook", func() {
 				err = k8sClient.Create(context.Background(), &sk)
 				Expect(err).NotTo(HaveOccurred())
 
-				sk.Status = netbirdiov1.NBSetupKeyStatus{
-					Conditions: []netbirdiov1.NBCondition{
+				sk.Status = openzrov1.NBSetupKeyStatus{
+					Conditions: []openzrov1.NBCondition{
 						{
-							Type:   netbirdiov1.NBSetupKeyReady,
+							Type:   openzrov1.NBSetupKeyReady,
 							Status: corev1.ConditionTrue,
 						},
 					},
@@ -123,7 +123,7 @@ var _ = Describe("Pod Webhook", func() {
 			It("Should inject NB container", func() {
 				Expect(defaulter.Default(context.Background(), obj)).NotTo(HaveOccurred())
 				Expect(obj.Spec.Containers).To(HaveLen(2))
-				Expect(obj.Spec.Containers[1].Name).To(Equal("netbird"))
+				Expect(obj.Spec.Containers[1].Name).To(Equal("openzro"))
 			})
 
 			It("Should inject NB container as native sidecar when init-sidecar annotation is true", func() {
@@ -131,7 +131,7 @@ var _ = Describe("Pod Webhook", func() {
 				Expect(defaulter.Default(context.Background(), obj)).NotTo(HaveOccurred())
 				Expect(obj.Spec.Containers).To(HaveLen(1), "original containers should be unchanged")
 				Expect(obj.Spec.InitContainers).To(HaveLen(1))
-				Expect(obj.Spec.InitContainers[0].Name).To(Equal("netbird"))
+				Expect(obj.Spec.InitContainers[0].Name).To(Equal("openzro"))
 				Expect(obj.Spec.InitContainers[0].RestartPolicy).NotTo(BeNil())
 				Expect(*obj.Spec.InitContainers[0].RestartPolicy).To(Equal(corev1.ContainerRestartPolicyAlways))
 			})
@@ -140,7 +140,7 @@ var _ = Describe("Pod Webhook", func() {
 				obj.Annotations[sidecarAnnotation] = "false"
 				Expect(defaulter.Default(context.Background(), obj)).NotTo(HaveOccurred())
 				Expect(obj.Spec.Containers).To(HaveLen(2))
-				Expect(obj.Spec.Containers[1].Name).To(Equal("netbird"))
+				Expect(obj.Spec.Containers[1].Name).To(Equal("openzro"))
 				Expect(obj.Spec.InitContainers).To(BeEmpty())
 			})
 
@@ -148,7 +148,7 @@ var _ = Describe("Pod Webhook", func() {
 				delete(obj.Annotations, sidecarAnnotation)
 				Expect(defaulter.Default(context.Background(), obj)).NotTo(HaveOccurred())
 				Expect(obj.Spec.Containers).To(HaveLen(2))
-				Expect(obj.Spec.Containers[1].Name).To(Equal("netbird"))
+				Expect(obj.Spec.Containers[1].Name).To(Equal("openzro"))
 				Expect(obj.Spec.InitContainers).To(BeEmpty())
 			})
 
@@ -157,23 +157,23 @@ var _ = Describe("Pod Webhook", func() {
 
 	Context("When creating Pod with SidecarProfile", func() {
 		BeforeEach(func() {
-			sidecarProfile := &nbv1alpha1.SidecarProfile{
+			sidecarProfile := &ozv1alpha1.SidecarProfile{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
 				},
-				Spec: nbv1alpha1.SidecarProfileSpec{
+				Spec: ozv1alpha1.SidecarProfileSpec{
 					SetupKeyRef: corev1.LocalObjectReference{
 						Name: "test",
 					},
-					InjectionMode: nbv1alpha1.InjectionModeContainer,
+					InjectionMode: ozv1alpha1.InjectionModeContainer,
 				},
 			}
 			Expect(k8sClient.Create(context.Background(), sidecarProfile)).To(Succeed())
 		})
 
 		AfterEach(func() {
-			sidecarProfile := &nbv1alpha1.SidecarProfile{
+			sidecarProfile := &ozv1alpha1.SidecarProfile{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test",
 					Namespace: "test",
@@ -191,12 +191,12 @@ var _ = Describe("Pod Webhook", func() {
 
 		When("SetupKey exists", func() {
 			It("Should succeed", func() {
-				setupKey := &nbv1alpha1.SetupKey{
+				setupKey := &ozv1alpha1.SetupKey{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
 					},
-					Spec: nbv1alpha1.SetupKeySpec{
+					Spec: ozv1alpha1.SetupKeySpec{
 						Name:      "test",
 						Ephemeral: true,
 					},
@@ -205,7 +205,7 @@ var _ = Describe("Pod Webhook", func() {
 
 				Expect(defaulter.Default(context.Background(), obj)).NotTo(HaveOccurred())
 				Expect(obj.Spec.Containers).To(HaveLen(2))
-				Expect(obj.Spec.Containers[1].Name).To(Equal("netbird"))
+				Expect(obj.Spec.Containers[1].Name).To(Equal("openzro"))
 			})
 		})
 	})

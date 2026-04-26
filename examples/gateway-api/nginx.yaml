@@ -7,10 +7,10 @@ metadata:
     app: nginx
 spec:
   hostnames:
-  - nginx-test-app.eu1.netbird.services
+  - nginx-test-app.eu1.openzro.services
   parentRefs:
   - name: public
-    namespace: netbird
+    namespace: openzro
   rules:
     - backendRefs:
         - name: nginx

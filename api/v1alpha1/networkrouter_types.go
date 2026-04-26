@@ -16,9 +16,9 @@ type NetworkRouterSpec struct {
 	WorkloadOverride *WorkloadOverride `json:"workloadOverride,omitempty"`
 }
 
-// DNSZoneReference references a Netbird DNS zone by domain name.
+// DNSZoneReference references a openZro DNS zone by domain name.
 type DNSZoneReference struct {
-	// Name is the domain name of an existing Netbird DNS zone, e.g. "example.com".
+	// Name is the domain name of an existing openZro DNS zone, e.g. "example.com".
 	// +required
 	Name string `json:"name"`
 }

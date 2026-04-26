@@ -10,8 +10,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/netbirdmock"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/openzromock"
 )
 
 var _ = Describe("Group Controller", func() {
@@ -27,12 +27,12 @@ var _ = Describe("Group Controller", func() {
 		BeforeEach(func() {
 			controllerReconciler = &GroupReconciler{
 				Client:  k8sClient,
-				Netbird: netbirdmock.Client(),
+				openZro: openzromock.Client(),
 			}
 		})
 
 		AfterEach(func() {
-			group := &nbv1alpha1.Group{}
+			group := &ozv1alpha1.Group{}
 			err := k8sClient.Get(ctx, nn, group)
 			if kerrors.IsNotFound(err) {
 				return
@@ -43,13 +43,13 @@ var _ = Describe("Group Controller", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("ensures a Netbird group exists on reconcile", func() {
-			group := &nbv1alpha1.Group{
+		It("ensures a openZro group exists on reconcile", func() {
+			group := &ozv1alpha1.Group{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nn.Name,
 					Namespace: nn.Namespace,
 				},
-				Spec: nbv1alpha1.GroupSpec{
+				Spec: ozv1alpha1.GroupSpec{
 					Name: "foobar",
 				},
 			}
@@ -64,11 +64,11 @@ var _ = Describe("Group Controller", func() {
 			Expect(group.Status.GroupID).NotTo(BeEmpty())
 
 			By("crerating a new group when deleted from API")
-			err = controllerReconciler.Netbird.Groups.Delete(ctx, group.Status.GroupID)
+			err = controllerReconciler.openZro.Groups.Delete(ctx, group.Status.GroupID)
 			Expect(err).NotTo(HaveOccurred())
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: nn})
 			Expect(err).NotTo(HaveOccurred())
-			newGroup := &nbv1alpha1.Group{}
+			newGroup := &ozv1alpha1.Group{}
 			err = k8sClient.Get(ctx, nn, newGroup)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(newGroup.Status.GroupID).NotTo(Equal(group.Status.GroupID))

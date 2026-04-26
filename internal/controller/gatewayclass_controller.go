@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/fluxcd/pkg/runtime/patch"
-	"github.com/netbirdio/kubernetes-operator/internal/k8sutil"
+	"github.com/openzro/openzro-operator/internal/k8sutil"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	GatewayControllerName = "gateway.netbird.io/controller"
+	GatewayControllerName = "gateway.openzro.io/controller"
 )
 
 type GatewayClassReconciler struct {
@@ -42,8 +42,8 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 
 	// Validate configuration.
 	message := func() string {
-		if gwc.Name != "netbird-public" && gwc.Name != "netbird-private" {
-			return "GatewayClass name must be netbird-public or netbird-private."
+		if gwc.Name != "openzro-public" && gwc.Name != "openzro-private" {
+			return "GatewayClass name must be openzro-public or openzro-private."
 		}
 		if gwc.Spec.ParametersRef != nil {
 			return "Parameters references is not supported."
@@ -71,7 +71,7 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		Type:    string(gatewayv1.GatewayClassConditionStatusAccepted),
 		Status:  metav1.ConditionTrue,
 		Reason:  string(gatewayv1.GatewayClassReasonAccepted),
-		Message: "Reconciled by Netbird Operator.",
+		Message: "Reconciled by openZro Operator.",
 	}
 	meta.SetStatusCondition(&gwc.Status.Conditions, cond)
 	err = sp.Patch(ctx, gwc)

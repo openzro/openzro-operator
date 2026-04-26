@@ -1,6 +1,6 @@
-# NetBird Kubernetes Operator
+# openZro Kubernetes Operator
 
-The NetBird Kubernetes Operator automates the provisioning of NetBird network access for services running in your cluster.
+The openZro Kubernetes Operator automates the provisioning of openZro network access for services running in your cluster.
 
 ## Documentation
 
@@ -10,23 +10,23 @@ The NetBird Kubernetes Operator automates the provisioning of NetBird network ac
 
 ## How It Works
 
-A `NetworkRouter` registers a NetBird router peer for a given DNS zone in your cluster.
+A `NetworkRouter` registers a openZro router peer for a given DNS zone in your cluster.
 
 ```yaml
-apiVersion: netbird.io/v1alpha1
+apiVersion: openzro.io/v1alpha1
 kind: NetworkRouter
 metadata:
   name: prod
-  namespace: netbird
+  namespace: openzro
 spec:
   dnsZoneRef:
     name: prod.company.internal
 ```
 
-A `NetworkResource` then exposes a Kubernetes service through that router to one or more NetBird groups.
+A `NetworkResource` then exposes a Kubernetes service through that router to one or more openZro groups.
 
 ```yaml
-apiVersion: netbird.io/v1alpha1
+apiVersion: openzro.io/v1alpha1
 kind: NetworkResource
 metadata:
   name: nginx
@@ -34,7 +34,7 @@ metadata:
 spec:
   networkRouterRef:
     name: prod
-    namespace: netbird
+    namespace: openzro
   serviceRef:
     name: nginx
   groups:

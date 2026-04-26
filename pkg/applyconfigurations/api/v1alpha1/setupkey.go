@@ -26,7 +26,7 @@ func SetupKey(name, namespace string) *SetupKeyApplyConfiguration {
 	b.WithName(name)
 	b.WithNamespace(namespace)
 	b.WithKind("SetupKey")
-	b.WithAPIVersion("netbird.io/v1alpha1")
+	b.WithAPIVersion("openzro.io/v1alpha1")
 	return b
 }
 

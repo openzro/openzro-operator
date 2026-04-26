@@ -4,10 +4,10 @@ gatewayAPI:
 webhook:
   enableCertManager: false
 
-netbirdAPI:
+openzroAPI:
   keyFromSecret:
-    name: "netbird-mgmt-api-key"
-    key: "NB_API_KEY"
+    name: "openzro-mgmt-api-key"
+    key: "OZ_API_KEY"
 
 operator:
   image:

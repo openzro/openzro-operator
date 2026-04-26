@@ -8,8 +8,8 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -23,24 +23,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/k8sutil"
-	"github.com/netbirdio/kubernetes-operator/internal/netbirdutil"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/k8sutil"
+	"github.com/openzro/openzro-operator/internal/openzroutil"
 )
 
 type NetworkResourceReconciler struct {
 	client.Client
 
-	Netbird *netbird.Client
+	openZro *openzro.Client
 }
 
-// +kubebuilder:rbac:groups=netbird.io,resources=networkresources,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=netbird.io,resources=networkresources/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=netbird.io,resources=networkresources/finalizers,verbs=update
+// +kubebuilder:rbac:groups=openzro.io,resources=networkresources,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=openzro.io,resources=networkresources/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=openzro.io,resources=networkresources/finalizers,verbs=update
 
 // nolint:gocyclo
 func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	netResource := &nbv1alpha1.NetworkResource{}
+	netResource := &ozv1alpha1.NetworkResource{}
 	err := r.Get(ctx, req.NamespacedName, netResource)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -60,7 +60,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	err = r.Get(ctx, client.ObjectKeyFromObject(svc), svc)
 	if err != nil {
 		if kerrors.IsNotFound(err) {
-			conditions.MarkFalse(netResource, nbv1alpha1.ReadyCondition, nbv1alpha1.DependencyReason, "Referenced Service cannot be found.")
+			conditions.MarkFalse(netResource, ozv1alpha1.ReadyCondition, ozv1alpha1.DependencyReason, "Referenced Service cannot be found.")
 			err = sp.Patch(ctx, netResource)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -70,7 +70,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 	if svc.Spec.Type != corev1.ServiceTypeClusterIP {
-		conditions.MarkFalse(netResource, nbv1alpha1.ReadyCondition, nbv1alpha1.DependencyReason, "Referenced Service is not of type ClusterIP.")
+		conditions.MarkFalse(netResource, ozv1alpha1.ReadyCondition, ozv1alpha1.DependencyReason, "Referenced Service is not of type ClusterIP.")
 		err = sp.Patch(ctx, netResource)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -78,7 +78,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 	if svc.Spec.ClusterIP == "" || svc.Spec.ClusterIP == corev1.ClusterIPNone {
-		conditions.MarkFalse(netResource, nbv1alpha1.ReadyCondition, nbv1alpha1.DependencyReason, "Referenced Service does not have a ClusterIP set.")
+		conditions.MarkFalse(netResource, ozv1alpha1.ReadyCondition, ozv1alpha1.DependencyReason, "Referenced Service does not have a ClusterIP set.")
 		err = sp.Patch(ctx, netResource)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -86,7 +86,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	netRouter := &nbv1alpha1.NetworkRouter{
+	netRouter := &ozv1alpha1.NetworkRouter{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      netResource.Spec.NetworkRouterRef.Name,
 			Namespace: netResource.Spec.NetworkRouterRef.Namespace,
@@ -95,7 +95,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	err = r.Get(ctx, client.ObjectKeyFromObject(netRouter), netRouter)
 	if err != nil {
 		if kerrors.IsNotFound(err) {
-			conditions.MarkFalse(netResource, nbv1alpha1.ReadyCondition, nbv1alpha1.DependencyReason, "Referenced NetworkRouter cannot be found.")
+			conditions.MarkFalse(netResource, ozv1alpha1.ReadyCondition, ozv1alpha1.DependencyReason, "Referenced NetworkRouter cannot be found.")
 			err = sp.Patch(ctx, netResource)
 			if err != nil {
 				return ctrl.Result{}, err
@@ -105,7 +105,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, err
 	}
 	if netRouter.Status.NetworkID == "" || netRouter.Status.RoutingPeerID == "" {
-		conditions.MarkFalse(netResource, nbv1alpha1.ReadyCondition, nbv1alpha1.DependencyReason, "Referenced NetworkRouter is not ready.")
+		conditions.MarkFalse(netResource, ozv1alpha1.ReadyCondition, ozv1alpha1.DependencyReason, "Referenced NetworkRouter is not ready.")
 		err = sp.Patch(ctx, netResource)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -113,7 +113,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	groupIDs, err := netbirdutil.GetGroupIDs(ctx, r.Client, r.Netbird, netResource.Spec.Groups, netResource.Namespace)
+	groupIDs, err := openzroutil.GetGroupIDs(ctx, r.Client, r.openZro, netResource.Spec.Groups, netResource.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -129,15 +129,15 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			Groups:      groupIDs,
 		}
 		if netResource.Status.ResourceID != "" {
-			netResp, err := r.Netbird.Networks.Resources(netRouter.Status.NetworkID).Update(ctx, netResource.Status.ResourceID, netReq)
-			if err != nil && !netbird.IsNotFound(err) {
+			netResp, err := r.openZro.Networks.Resources(netRouter.Status.NetworkID).Update(ctx, netResource.Status.ResourceID, netReq)
+			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
 			if err == nil {
 				return netResp.Id, nil
 			}
 		}
-		netResp, err := r.Netbird.Networks.Resources(netRouter.Status.NetworkID).Create(ctx, netReq)
+		netResp, err := r.openZro.Networks.Resources(netRouter.Status.NetworkID).Create(ctx, netReq)
 		if err != nil {
 			return "", err
 		}
@@ -154,15 +154,15 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Create DNS records for resource.
-	zone, err := netbirdutil.GetDNSZoneByName(ctx, r.Netbird, netRouter.Spec.DNSZoneRef.Name)
+	zone, err := openzroutil.GetDNSZoneByName(ctx, r.openZro, netRouter.Spec.DNSZoneRef.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// If zone has changed we need to delete the old records.
 	if netResource.Status.DNSZoneID != "" && netResource.Status.DNSZoneID != zone.Id {
-		err = r.Netbird.DNSZones.DeleteRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID)
-		if err != nil && !netbird.IsNotFound(err) {
+		err = r.openZro.DNSZones.DeleteRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID)
+		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 		netResource.Status.DNSZoneID = ""
@@ -177,15 +177,15 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			Type:    api.DNSRecordTypeA,
 		}
 		if netResource.Status.DNSZoneID != "" && netResource.Status.DNSRecordID != "" {
-			recordResp, err := r.Netbird.DNSZones.UpdateRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID, dnsReq)
-			if err != nil && !netbird.IsNotFound(err) {
+			recordResp, err := r.openZro.DNSZones.UpdateRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID, dnsReq)
+			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
 			if err == nil {
 				return recordResp.Id, nil
 			}
 		}
-		recordResp, err := r.Netbird.DNSZones.CreateRecord(ctx, zone.Id, dnsReq)
+		recordResp, err := r.openZro.DNSZones.CreateRecord(ctx, zone.Id, dnsReq)
 		if err != nil {
 			return "", err
 		}
@@ -197,7 +197,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	netResource.Status.DNSZoneID = zone.Id
 	netResource.Status.DNSRecordID = recordID
 
-	conditions.MarkTrue(netResource, nbv1alpha1.ReadyCondition, nbv1alpha1.ReconciledReason, "")
+	conditions.MarkTrue(netResource, ozv1alpha1.ReadyCondition, ozv1alpha1.ReconciledReason, "")
 	err = sp.Patch(ctx, netResource, patch.WithStatusObservedGeneration{})
 	if err != nil {
 		return ctrl.Result{}, err
@@ -205,16 +205,16 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	return ctrl.Result{}, nil
 }
 
-func (r *NetworkResourceReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, netResource *nbv1alpha1.NetworkResource) (ctrl.Result, error) {
+func (r *NetworkResourceReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, netResource *ozv1alpha1.NetworkResource) (ctrl.Result, error) {
 	if netResource.Status.NetworkID != "" && netResource.Status.ResourceID != "" {
-		err := r.Netbird.Networks.Resources(netResource.Status.NetworkID).Delete(ctx, netResource.Status.ResourceID)
-		if err != nil && !netbird.IsNotFound(err) {
+		err := r.openZro.Networks.Resources(netResource.Status.NetworkID).Delete(ctx, netResource.Status.ResourceID)
+		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
 	if netResource.Status.DNSZoneID != "" && netResource.Status.DNSRecordID != "" {
-		err := r.Netbird.DNSZones.DeleteRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID)
-		if err != nil && !netbird.IsNotFound(err) {
+		err := r.openZro.DNSZones.DeleteRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID)
+		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
@@ -228,8 +228,8 @@ func (r *NetworkResourceReconciler) reconcileDelete(ctx context.Context, sp *pat
 }
 
 func (r *NetworkResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	err := mgr.GetFieldIndexer().IndexField(context.Background(), &nbv1alpha1.NetworkResource{}, ".spec.networkRouterRef", func(obj client.Object) []string {
-		netResource := obj.(*nbv1alpha1.NetworkResource)
+	err := mgr.GetFieldIndexer().IndexField(context.Background(), &ozv1alpha1.NetworkResource{}, ".spec.networkRouterRef", func(obj client.Object) []string {
+		netResource := obj.(*ozv1alpha1.NetworkResource)
 		ref := netResource.Spec.NetworkRouterRef
 		if ref.Name == "" {
 			return nil
@@ -242,8 +242,8 @@ func (r *NetworkResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if err != nil {
 		return err
 	}
-	err = mgr.GetFieldIndexer().IndexField(context.Background(), &nbv1alpha1.NetworkResource{}, ".spec.serviceRef", func(obj client.Object) []string {
-		netResource := obj.(*nbv1alpha1.NetworkResource)
+	err = mgr.GetFieldIndexer().IndexField(context.Background(), &ozv1alpha1.NetworkResource{}, ".spec.serviceRef", func(obj client.Object) []string {
+		netResource := obj.(*ozv1alpha1.NetworkResource)
 		ref := netResource.Spec.ServiceRef
 		if ref.Name == "" {
 			return nil
@@ -255,11 +255,11 @@ func (r *NetworkResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&nbv1alpha1.NetworkResource{}).
+		For(&ozv1alpha1.NetworkResource{}).
 		Watches(
-			&nbv1alpha1.NetworkRouter{},
+			&ozv1alpha1.NetworkRouter{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				netResourceList := &nbv1alpha1.NetworkResourceList{}
+				netResourceList := &ozv1alpha1.NetworkResourceList{}
 				err := r.List(ctx, netResourceList, client.MatchingFields{".spec.networkRouterRef": fmt.Sprintf("%s/%s", obj.GetName(), obj.GetNamespace())})
 				if err != nil {
 					return nil
@@ -281,7 +281,7 @@ func (r *NetworkResourceReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&corev1.Service{},
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				netResourceList := &nbv1alpha1.NetworkResourceList{}
+				netResourceList := &ozv1alpha1.NetworkResourceList{}
 				err := r.List(ctx, netResourceList, client.InNamespace(obj.GetNamespace()), client.MatchingFields{".spec.serviceRef": obj.GetName()})
 				if err != nil {
 					return nil

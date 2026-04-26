@@ -2,22 +2,22 @@
 # This file is used to track the info used to scaffold your project
 # and allow the plugins properly work.
 # More info: https://book.kubebuilder.io/reference/project-config.html
-domain: netbird.io
+domain: openzro.io
 layout:
 - helm.kubebuilder.io/v1-alpha
 - go.kubebuilder.io/v4
 plugins:
   helm.kubebuilder.io/v1-alpha: {}
-projectName: kubernetes-operator
-repo: github.com/netbirdio/kubernetes-operator
+projectName: openzro-operator
+repo: github.com/openzro/openzro-operator
 resources:
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: NBSetupKey
-  path: github.com/netbirdio/kubernetes-operator/api/v1
+  path: github.com/openzro/openzro-operator/api/v1
   version: v1
   webhooks:
     validation: true
@@ -33,9 +33,9 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: NBRoutingPeer
-  path: github.com/netbirdio/kubernetes-operator/api/v1
+  path: github.com/openzro/openzro-operator/api/v1
   version: v1
   webhooks:
     validation: true
@@ -49,9 +49,9 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: NBResource
-  path: github.com/netbirdio/kubernetes-operator/api/v1
+  path: github.com/openzro/openzro-operator/api/v1
   version: v1
   webhooks:
     validation: true
@@ -60,9 +60,9 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: NBGroup
-  path: github.com/netbirdio/kubernetes-operator/api/v1
+  path: github.com/openzro/openzro-operator/api/v1
   version: v1
   webhooks:
     validation: true
@@ -71,48 +71,48 @@ resources:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: NBPolicy
-  path: github.com/netbirdio/kubernetes-operator/api/v1
+  path: github.com/openzro/openzro-operator/api/v1
   version: v1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: SetupKey
-  path: github.com/netbirdio/kubernetes-operator/api/v1alpha1
+  path: github.com/openzro/openzro-operator/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: Group
-  path: github.com/netbirdio/kubernetes-operator/api/v1alpha1
+  path: github.com/openzro/openzro-operator/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: NetworkRouter
-  path: github.com/netbirdio/kubernetes-operator/api/v1alpha1
+  path: github.com/openzro/openzro-operator/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: NetworkResource
-  path: github.com/netbirdio/kubernetes-operator/api/v1alpha1
+  path: github.com/openzro/openzro-operator/api/v1alpha1
   version: v1alpha1
 - api:
     crdVersion: v1
     namespaced: true
   controller: true
-  domain: netbird.io
+  domain: openzro.io
   kind: SidecarProfile
-  path: github.com/netbirdio/kubernetes-operator/api/v1alpha1
+  path: github.com/openzro/openzro-operator/api/v1alpha1
   version: v1alpha1
 version: "3"

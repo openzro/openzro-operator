@@ -12,9 +12,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/netbirdmock"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/openzromock"
+	"github.com/openzro/openzro/shared/management/http/api"
 )
 
 var _ = Describe("NetworkResource Controller", func() {
@@ -32,24 +32,24 @@ var _ = Describe("NetworkResource Controller", func() {
 		}
 
 		BeforeEach(func() {
-			nbClient := netbirdmock.Client()
+			nbClient := openzromock.Client()
 			netResourceRec = &NetworkResourceReconciler{
 				Client:  k8sClient,
-				Netbird: nbClient,
+				openZro: nbClient,
 			}
 			netRouterRec = &NetworkRouterReconciler{
 				Client:        k8sClient,
-				Netbird:       nbClient,
-				ClientImage:   "docker.io/netbirdio/netbird:latest",
-				ManagementURL: "https://netbird.io",
+				openZro:       nbClient,
+				ClientImage:   "docker.io/openzro/openzro:latest",
+				ManagementURL: "https://openzro.io",
 			}
 			setupKeyRec = &SetupKeyReconciler{
 				Client:  k8sClient,
-				Netbird: nbClient,
+				openZro: nbClient,
 			}
 			groupRec = &GroupReconciler{
 				Client:  k8sClient,
-				Netbird: nbClient,
+				openZro: nbClient,
 			}
 
 			ns := &corev1.Namespace{
@@ -79,17 +79,17 @@ var _ = Describe("NetworkResource Controller", func() {
 				Name:   "cluster.local",
 				Domain: "cluster.local",
 			}
-			_, err := netRouterRec.Netbird.DNSZones.CreateZone(ctx, zoneReq)
+			_, err := netRouterRec.openZro.DNSZones.CreateZone(ctx, zoneReq)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Create network router that we reference.
-			netRouter := &nbv1alpha1.NetworkRouter{
+			netRouter := &ozv1alpha1.NetworkRouter{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nn.Name,
 					Namespace: nn.Namespace,
 				},
-				Spec: nbv1alpha1.NetworkRouterSpec{
-					DNSZoneRef: nbv1alpha1.DNSZoneReference{
+				Spec: ozv1alpha1.NetworkRouterSpec{
+					DNSZoneRef: ozv1alpha1.DNSZoneReference{
 						Name: "cluster.local",
 					},
 				},
@@ -120,13 +120,13 @@ var _ = Describe("NetworkResource Controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, svc)).To(Succeed())
 
-			netResource := &nbv1alpha1.NetworkResource{
+			netResource := &ozv1alpha1.NetworkResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nn.Name,
 					Namespace: nn.Namespace,
 				},
-				Spec: nbv1alpha1.NetworkResourceSpec{
-					NetworkRouterRef: nbv1alpha1.CrossNamespaceReference{
+				Spec: ozv1alpha1.NetworkResourceSpec{
+					NetworkRouterRef: ozv1alpha1.CrossNamespaceReference{
 						Name:      netRouter.Name,
 						Namespace: netRouter.Namespace,
 					},

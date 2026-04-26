@@ -1,8 +1,8 @@
-apiVersion: netbird.io/v1alpha1
+apiVersion: openzro.io/v1alpha1
 kind: NetworkRouter
 metadata:
-  name: netbird
-  namespace: netbird
+  name: openzro
+  namespace: openzro
 spec:
   dnsZoneRef:
     name: cluster.local
@@ -10,37 +10,37 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
-  name: netbird-public
+  name: openzro-public
 spec:
-  controllerName: "gateway.netbird.io/controller"
+  controllerName: "gateway.openzro.io/controller"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
-  name: netbird-private
+  name: openzro-private
 spec:
-  controllerName: "gateway.netbird.io/controller"
+  controllerName: "gateway.openzro.io/controller"
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: private
-  namespace: netbird
+  namespace: openzro
 spec:
-  gatewayClassName: netbird-private
+  gatewayClassName: openzro-private
   listeners:
-  - protocol: gateway.netbird.io/NetworkRouter
-    name: netbird
+  - protocol: gateway.openzro.io/NetworkRouter
+    name: openzro
     port: 1
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: public
-  namespace: netbird
+  namespace: openzro
 spec:
-  gatewayClassName: netbird-public
+  gatewayClassName: openzro-public
   listeners:
-  - protocol: gateway.netbird.io/NetworkRouter
-    name: netbird
+  - protocol: gateway.openzro.io/NetworkRouter
+    name: openzro
     port: 1

@@ -1,4 +1,4 @@
-apiVersion: netbird.io/v1alpha1
+apiVersion: openzro.io/v1alpha1
 kind: SetupKey
 metadata:
   name: sidecar
@@ -7,7 +7,7 @@ spec:
   name: sidecar
   ephemeral: true
 ---
-apiVersion: netbird.io/v1alpha1
+apiVersion: openzro.io/v1alpha1
 kind: SidecarProfile
 metadata:
   name: test

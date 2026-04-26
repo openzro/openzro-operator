@@ -6,8 +6,8 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -17,21 +17,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/gatewayutil"
-	"github.com/netbirdio/kubernetes-operator/internal/k8sutil"
-	"github.com/netbirdio/kubernetes-operator/internal/util"
-	nbv1alpha1ac "github.com/netbirdio/kubernetes-operator/pkg/applyconfigurations/api/v1alpha1"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/gatewayutil"
+	"github.com/openzro/openzro-operator/internal/k8sutil"
+	"github.com/openzro/openzro-operator/internal/util"
+	ozv1alpha1ac "github.com/openzro/openzro-operator/pkg/applyconfigurations/api/v1alpha1"
 )
 
 const (
-	HTTPRouteFinalizer = "gateway.netbird.io/httproute"
+	HTTPRouteFinalizer = "gateway.openzro.io/httproute"
 )
 
 type HTTPRouteReconciler struct {
 	client.Client
 
-	Netbird *netbird.Client
+	openZro *openzro.Client
 }
 
 // nolint:gocyclo
@@ -96,11 +96,11 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if err != nil {
 				return ctrl.Result{}, err
 			}
-			netResourceAC := nbv1alpha1ac.NetworkResource(svc.Name, svc.Namespace).
+			netResourceAC := ozv1alpha1ac.NetworkResource(svc.Name, svc.Namespace).
 				WithOwnerReferences(controllerRef, ownerRef).
 				WithSpec(
-					nbv1alpha1ac.NetworkResourceSpec().
-						WithNetworkRouterRef(nbv1alpha1ac.CrossNamespaceReference().WithName(netRouter.Name).WithNamespace(netRouter.Namespace)).
+					ozv1alpha1ac.NetworkResourceSpec().
+						WithNetworkRouterRef(ozv1alpha1ac.CrossNamespaceReference().WithName(netRouter.Name).WithNamespace(netRouter.Namespace)).
 						WithServiceRef(corev1.LocalObjectReference{Name: svc.Name}),
 				)
 			err = r.Client.Apply(ctx, netResourceAC)
@@ -111,7 +111,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 		targets := []api.ServiceTarget{}
 		for _, svc := range svcIdx {
-			netResource := &nbv1alpha1.NetworkResource{
+			netResource := &ozv1alpha1.NetworkResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      svc.Name,
 					Namespace: svc.Namespace,
@@ -121,7 +121,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 			if err != nil {
 				return ctrl.Result{}, err
 			}
-			if !conditions.Has(netResource, nbv1alpha1.ReadyCondition) {
+			if !conditions.Has(netResource, ozv1alpha1.ReadyCondition) {
 				return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 			}
 
@@ -136,7 +136,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 
 		// Create proxy service.
-		proxyServices, err := r.Netbird.ReverseProxyServices.List(ctx)
+		proxyServices, err := r.openZro.ReverseProxyServices.List(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -156,12 +156,12 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 					if proxyService.Domain != string(hostname) {
 						continue
 					}
-					_, err := r.Netbird.ReverseProxyServices.Update(ctx, proxyService.Id, proxyReq)
+					_, err := r.openZro.ReverseProxyServices.Update(ctx, proxyService.Id, proxyReq)
 					if err != nil {
 						return err
 					}
 				}
-				_, err := r.Netbird.ReverseProxyServices.Create(ctx, proxyReq)
+				_, err := r.openZro.ReverseProxyServices.Create(ctx, proxyReq)
 				if err != nil {
 					return err
 				}
@@ -178,7 +178,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 func (r *HTTPRouteReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, hr *gatewayv1.HTTPRoute) (ctrl.Result, error) {
 	// Index all proxy services.
-	proxyServices, err := r.Netbird.ReverseProxyServices.List(ctx)
+	proxyServices, err := r.openZro.ReverseProxyServices.List(ctx)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -213,7 +213,7 @@ func (r *HTTPRouteReconciler) reconcileDelete(ctx context.Context, sp *patch.Ser
 			}
 		}
 		for _, svc := range svcIdx {
-			netResource := &nbv1alpha1.NetworkResource{
+			netResource := &ozv1alpha1.NetworkResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      svc.Name,
 					Namespace: svc.Namespace,
@@ -248,8 +248,8 @@ func (r *HTTPRouteReconciler) reconcileDelete(ctx context.Context, sp *patch.Ser
 			if !ok {
 				continue
 			}
-			err = r.Netbird.ReverseProxyServices.Delete(ctx, id)
-			if err != nil && !netbird.IsNotFound(err) {
+			err = r.openZro.ReverseProxyServices.Delete(ctx, id)
+			if err != nil && !openzro.IsNotFound(err) {
 				return ctrl.Result{}, err
 			}
 		}

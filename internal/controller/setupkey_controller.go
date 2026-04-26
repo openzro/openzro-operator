@@ -7,8 +7,8 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
@@ -17,9 +17,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/k8sutil"
-	"github.com/netbirdio/kubernetes-operator/internal/netbirdutil"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/k8sutil"
+	"github.com/openzro/openzro-operator/internal/openzroutil"
 )
 
 const (
@@ -29,14 +29,14 @@ const (
 type SetupKeyReconciler struct {
 	client.Client
 
-	Netbird *netbird.Client
+	openZro *openzro.Client
 }
 
-// +kubebuilder:rbac:groups=netbird.io,resources=setupkeys,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=netbird.io,resources=setupkeys/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=netbird.io,resources=setupkeys/finalizers,verbs=update
+// +kubebuilder:rbac:groups=openzro.io,resources=setupkeys,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=openzro.io,resources=setupkeys/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=openzro.io,resources=setupkeys/finalizers,verbs=update
 func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	setupKey := &nbv1alpha1.SetupKey{}
+	setupKey := &ozv1alpha1.SetupKey{}
 	err := r.Get(ctx, req.NamespacedName, setupKey)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -51,7 +51,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.reconcileDelete(ctx, sp, setupKey)
 	}
 
-	autoGroupIDs, err := netbirdutil.GetGroupIDs(ctx, r.Client, r.Netbird, setupKey.Spec.AutoGroups, setupKey.Namespace)
+	autoGroupIDs, err := openzroutil.GetGroupIDs(ctx, r.Client, r.openZro, setupKey.Spec.AutoGroups, setupKey.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -68,9 +68,9 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			return false, nil
 		}
 
-		// Check setup key in Netbird.
-		resp, err := r.Netbird.SetupKeys.Get(ctx, setupKey.Status.SetupKeyID)
-		if netbird.IsNotFound(err) {
+		// Check setup key in openZro.
+		resp, err := r.openZro.SetupKeys.Get(ctx, setupKey.Status.SetupKeyID)
+		if openzro.IsNotFound(err) {
 			return false, nil
 		}
 		if err != nil {
@@ -102,7 +102,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		setupKeyReq := api.PutApiSetupKeysKeyIdJSONRequestBody{
 			AutoGroups: autoGroupIDs,
 		}
-		_, err = r.Netbird.SetupKeys.Update(ctx, setupKey.Status.SetupKeyID, setupKeyReq)
+		_, err = r.openZro.SetupKeys.Update(ctx, setupKey.Status.SetupKeyID, setupKeyReq)
 		if err != nil {
 			return false, err
 		}
@@ -131,7 +131,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Type:                "reusable",
 		UsageLimit:          0,
 	}
-	resp, err := r.Netbird.SetupKeys.Create(ctx, setupKeyReq)
+	resp, err := r.openZro.SetupKeys.Create(ctx, setupKeyReq)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -155,13 +155,13 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Delete the old status key if we are recreating.
 	if oldSetupKeyID != "" {
-		err = r.Netbird.SetupKeys.Delete(ctx, oldSetupKeyID)
-		if err != nil && !netbird.IsNotFound(err) {
+		err = r.openZro.SetupKeys.Delete(ctx, oldSetupKeyID)
+		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
 
-	conditions.MarkTrue(setupKey, nbv1alpha1.ReadyCondition, nbv1alpha1.ReconciledReason, "")
+	conditions.MarkTrue(setupKey, ozv1alpha1.ReadyCondition, ozv1alpha1.ReconciledReason, "")
 	err = sp.Patch(ctx, setupKey, patch.WithStatusObservedGeneration{})
 	if err != nil {
 		return ctrl.Result{}, err
@@ -169,10 +169,10 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	return ctrl.Result{RequeueAfter: 15 * time.Minute}, nil
 }
 
-func (r *SetupKeyReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, setupKey *nbv1alpha1.SetupKey) (ctrl.Result, error) {
+func (r *SetupKeyReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, setupKey *ozv1alpha1.SetupKey) (ctrl.Result, error) {
 	if setupKey.Status.SetupKeyID != "" {
-		err := r.Netbird.SetupKeys.Delete(ctx, setupKey.Status.SetupKeyID)
-		if err != nil && !netbird.IsNotFound(err) {
+		err := r.openZro.SetupKeys.Delete(ctx, setupKey.Status.SetupKeyID)
+		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
@@ -187,7 +187,7 @@ func (r *SetupKeyReconciler) reconcileDelete(ctx context.Context, sp *patch.Seri
 
 func (r *SetupKeyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&nbv1alpha1.SetupKey{}).
+		For(&ozv1alpha1.SetupKey{}).
 		Owns(&corev1.Secret{}).
 		Complete(r)
 }

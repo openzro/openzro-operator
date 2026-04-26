@@ -1,8 +1,8 @@
-apiVersion: netbird.io/v1alpha1
+apiVersion: openzro.io/v1alpha1
 kind: NetworkRouter
 metadata:
   name: prod
-  namespace: netbird
+  namespace: openzro
 spec:
   dnsZoneRef:
     name: prod.company.internal

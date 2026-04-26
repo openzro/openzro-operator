@@ -1,7 +1,7 @@
 package k8sutil
 
-const NetbirdFinalizer = "finalizers.netbird.io"
+const openZroFinalizer = "finalizers.openzro.io"
 
 func Finalizer(kind string) string {
-	return NetbirdFinalizer + "/" + kind
+	return openZroFinalizer + "/" + kind
 }

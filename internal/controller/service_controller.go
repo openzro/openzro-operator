@@ -16,8 +16,8 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	"github.com/netbirdio/kubernetes-operator/internal/util"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	"github.com/openzro/openzro-operator/internal/util"
 )
 
 // ServiceReconciler reconciles a Service object
@@ -33,18 +33,18 @@ type ServiceReconciler struct {
 
 const (
 	// ServiceExposeAnnotation Service annotation for exposing
-	ServiceExposeAnnotation             = "netbird.io/expose"
-	serviceGroupsAnnotation             = "netbird.io/groups"
-	serviceResourceAnnotation           = "netbird.io/resource-name"
-	servicePolicyAnnotation             = "netbird.io/policy"
-	servicePortsAnnotation              = "netbird.io/policy-ports"
-	serviceProtocolAnnotation           = "netbird.io/policy-protocol"
-	servicePolicySourceGroupsAnnotation = "netbird.io/policy-source-groups"
-	servicePolicyNameAnnotation         = "netbird.io/policy-name"
+	ServiceExposeAnnotation             = "openzro.io/expose"
+	serviceGroupsAnnotation             = "openzro.io/groups"
+	serviceResourceAnnotation           = "openzro.io/resource-name"
+	servicePolicyAnnotation             = "openzro.io/policy"
+	servicePortsAnnotation              = "openzro.io/policy-ports"
+	serviceProtocolAnnotation           = "openzro.io/policy-protocol"
+	servicePolicySourceGroupsAnnotation = "openzro.io/policy-source-groups"
+	servicePolicyNameAnnotation         = "openzro.io/policy-name"
 )
 
 var (
-	networkDescription = "Created by kubernetes-operator"
+	networkDescription = "Created by openzro-operator"
 )
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -82,7 +82,7 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 // hideService deletes NBResource for Service
 func (r *ServiceReconciler) hideService(ctx context.Context, req ctrl.Request, svc corev1.Service, logger logr.Logger) (ctrl.Result, error) {
-	var nbResource netbirdiov1.NBResource
+	var nbResource openzrov1.NBResource
 	err := r.Client.Get(ctx, req.NamespacedName, &nbResource)
 	if err != nil && !errors.IsNotFound(err) {
 		logger.Error(errKubernetesAPI, "error getting NBResource", "err", err)
@@ -97,8 +97,8 @@ func (r *ServiceReconciler) hideService(ctx context.Context, req ctrl.Request, s
 		}
 	}
 
-	if slices.Contains(svc.Finalizers, "netbird.io/cleanup") {
-		svc.Finalizers = util.Without(svc.Finalizers, "netbird.io/cleanup")
+	if slices.Contains(svc.Finalizers, "openzro.io/cleanup") {
+		svc.Finalizers = util.Without(svc.Finalizers, "openzro.io/cleanup")
 		err := r.Client.Update(ctx, &svc)
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error updating Service", "err", err)
@@ -116,8 +116,8 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 		routerNamespace = req.Namespace
 	}
 
-	if !slices.Contains(svc.Finalizers, "netbird.io/cleanup") {
-		svc.Finalizers = append(svc.Finalizers, "netbird.io/cleanup")
+	if !slices.Contains(svc.Finalizers, "openzro.io/cleanup") {
+		svc.Finalizers = append(svc.Finalizers, "openzro.io/cleanup")
 		err := r.Client.Update(ctx, &svc)
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error updating Service", "err", err)
@@ -125,7 +125,7 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 		}
 	}
 
-	var routingPeer netbirdiov1.NBRoutingPeer
+	var routingPeer openzrov1.NBRoutingPeer
 	// Check if NBRoutingPeer exists
 	err := r.Client.Get(ctx, types.NamespacedName{Namespace: routerNamespace, Name: "router"}, &routingPeer)
 	if err != nil && !errors.IsNotFound(err) {
@@ -135,14 +135,14 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 
 	// Create NBRoutingPeer with default values if not exists
 	if errors.IsNotFound(err) {
-		routingPeer = netbirdiov1.NBRoutingPeer{
+		routingPeer = openzrov1.NBRoutingPeer{
 			ObjectMeta: v1.ObjectMeta{
 				Name:       "router",
 				Namespace:  routerNamespace,
-				Finalizers: []string{"netbird.io/cleanup"},
+				Finalizers: []string{"openzro.io/cleanup"},
 				Labels:     r.DefaultLabels,
 			},
-			Spec: netbirdiov1.NBRoutingPeerSpec{},
+			Spec: openzrov1.NBRoutingPeerSpec{},
 		}
 
 		err = r.Client.Create(ctx, &routingPeer)
@@ -161,7 +161,7 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	var nbResource netbirdiov1.NBResource
+	var nbResource openzrov1.NBResource
 	err = r.Client.Get(ctx, req.NamespacedName, &nbResource)
 	if err != nil && !errors.IsNotFound(err) {
 		logger.Error(errKubernetesAPI, "error getting NBResource", "err", err)
@@ -169,9 +169,9 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 	}
 
 	originalNBResource := nbResource.DeepCopy()
-	nbrsErr := r.reconcileNBResource(&nbResource, req, svc, routingPeer, logger)
-	if nbrsErr != nil {
-		return ctrl.Result{}, nbrsErr
+	ozrsErr := r.reconcileNBResource(&nbResource, req, svc, routingPeer, logger)
+	if ozrsErr != nil {
+		return ctrl.Result{}, ozrsErr
 	}
 
 	if errors.IsNotFound(err) {
@@ -192,7 +192,7 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 }
 
 // reconcileNBResource ensures NBResource settings are in-line with Service definition and annotations
-func (r *ServiceReconciler) reconcileNBResource(nbResource *netbirdiov1.NBResource, req ctrl.Request, svc corev1.Service, routingPeer netbirdiov1.NBRoutingPeer, logger logr.Logger) error {
+func (r *ServiceReconciler) reconcileNBResource(nbResource *openzrov1.NBResource, req ctrl.Request, svc corev1.Service, routingPeer openzrov1.NBRoutingPeer, logger logr.Logger) error {
 	groups := []string{fmt.Sprintf("%s-%s-%s", r.ClusterName, req.Namespace, req.Name)}
 	if v, ok := svc.Annotations[serviceGroupsAnnotation]; ok {
 		//nolint:prealloc
@@ -210,7 +210,7 @@ func (r *ServiceReconciler) reconcileNBResource(nbResource *netbirdiov1.NBResour
 	nbResource.ObjectMeta.Name = req.Name
 	nbResource.ObjectMeta.Namespace = req.Namespace
 	nbResource.ObjectMeta.Labels = r.DefaultLabels
-	nbResource.Finalizers = []string{"netbird.io/cleanup"}
+	nbResource.Finalizers = []string{"openzro.io/cleanup"}
 	nbResource.Spec.Name = resourceName
 	nbResource.Spec.NetworkID = *routingPeer.Status.NetworkID
 	nbResource.Spec.Address = fmt.Sprintf("%s.%s.%s", svc.Name, svc.Namespace, r.ClusterDNS)
@@ -230,7 +230,7 @@ func (r *ServiceReconciler) reconcileNBResource(nbResource *netbirdiov1.NBResour
 	return nil
 }
 
-func (r *ServiceReconciler) applyPolicy(nbResource *netbirdiov1.NBResource, svc corev1.Service, logger logr.Logger) error {
+func (r *ServiceReconciler) applyPolicy(nbResource *openzrov1.NBResource, svc corev1.Service, logger logr.Logger) error {
 	nbResource.Spec.PolicyName = svc.Annotations[servicePolicyAnnotation]
 	var filterProtocols []string
 	if v, ok := svc.Annotations[serviceProtocolAnnotation]; ok {

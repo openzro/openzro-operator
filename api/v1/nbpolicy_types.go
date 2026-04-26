@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/netbirdio/kubernetes-operator/internal/util"
+	"github.com/openzro/openzro-operator/internal/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -57,7 +57,7 @@ func (a NBPolicyStatus) Equal(b NBPolicyStatus) bool {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
-// NBPolicy is the Schema for the nbpolicies API.
+// NBPolicy is the Schema for the ozpolicies API.
 type NBPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

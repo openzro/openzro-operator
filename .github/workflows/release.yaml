@@ -18,7 +18,7 @@ jobs:
         uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf #v6.0.0
         with:
           images: |
-            netbirdio/kubernetes-operator
+            openzro/openzro-operator
           tags: |
             type=ref,event=pr
             type=ref,event=branch
@@ -44,4 +44,4 @@ jobs:
             "org.opencontainers.image.version={{.Version}}"
             "org.opencontainers.image.revision={{.FullCommit}}"
             "org.opencontainers.image.version={{.Version}}"
-            "maintainer=dev@netbird.io"
+            "maintainer=dev@openzro.io"

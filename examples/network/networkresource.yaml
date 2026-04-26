@@ -42,7 +42,7 @@ spec:
   selector:
     app: nginx
 ---
-apiVersion: netbird.io/v1alpha1
+apiVersion: openzro.io/v1alpha1
 kind: NetworkResource
 metadata:
   name: nginx
@@ -50,7 +50,7 @@ metadata:
 spec:
   networkRouterRef:
     name: prod
-    namespace: netbird
+    namespace: openzro
   serviceRef:
     name: nginx
   groups:

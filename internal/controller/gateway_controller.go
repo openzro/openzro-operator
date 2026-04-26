@@ -31,9 +31,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/gatewayutil"
-	"github.com/netbirdio/kubernetes-operator/internal/k8sutil"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/gatewayutil"
+	"github.com/openzro/openzro-operator/internal/k8sutil"
 )
 
 type GatewayReconciler struct {
@@ -102,7 +102,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if !conditions.Has(netRouter, nbv1alpha1.ReadyCondition) {
+	if !conditions.Has(netRouter, ozv1alpha1.ReadyCondition) {
 		// TODO (phillebaba): Should watch routing peer instead of retrying when not found.
 		cond := metav1.Condition{
 			Type:    string(gatewayv1.GatewayConditionProgrammed),

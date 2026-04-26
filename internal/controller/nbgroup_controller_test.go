@@ -13,10 +13,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	"github.com/netbirdio/kubernetes-operator/internal/util"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	"github.com/openzro/openzro-operator/internal/util"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 )
 
 var _ = Describe("NBGroup Controller", func() {
@@ -30,15 +30,15 @@ var _ = Describe("NBGroup Controller", func() {
 			Namespace: "default",
 		}
 
-		var netbirdClient *netbird.Client
+		var openzroClient *openzro.Client
 		var mux *http.ServeMux
 		var server *httptest.Server
-		var nbGroup netbirdiov1.NBGroup
+		var nbGroup openzrov1.NBGroup
 
 		BeforeEach(func() {
 			mux = &http.ServeMux{}
 			server = httptest.NewServer(mux)
-			netbirdClient = netbird.New(server.URL, "ABC")
+			openzroClient = openzro.New(server.URL, "ABC")
 
 			err := k8sClient.Get(ctx, typeNamespacedName, &nbGroup)
 			if err == nil {
@@ -46,13 +46,13 @@ var _ = Describe("NBGroup Controller", func() {
 				Expect(deleteErr).NotTo(HaveOccurred())
 			}
 			if err == nil || errors.IsNotFound(err) {
-				nbGroup = netbirdiov1.NBGroup{
+				nbGroup = openzrov1.NBGroup{
 					ObjectMeta: v1.ObjectMeta{
 						Name:       resourceName,
 						Namespace:  typeNamespacedName.Namespace,
-						Finalizers: []string{"netbird.io/group-cleanup"},
+						Finalizers: []string{"openzro.io/group-cleanup"},
 					},
-					Spec: netbirdiov1.NBGroupSpec{
+					Spec: openzrov1.NBGroupSpec{
 						Name: resourceName,
 					},
 				}
@@ -63,7 +63,7 @@ var _ = Describe("NBGroup Controller", func() {
 
 		AfterEach(func() {
 			server.Close()
-			resource := &netbirdiov1.NBGroup{}
+			resource := &openzrov1.NBGroup{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			if errors.IsNotFound(err) {
 				return
@@ -85,7 +85,7 @@ var _ = Describe("NBGroup Controller", func() {
 				By("Reconciling the created resource")
 				controllerReconciler := &NBGroupReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +114,7 @@ var _ = Describe("NBGroup Controller", func() {
 				Expect(*nbGroup.Status.GroupID).To(Equal("Test"))
 				Expect(nbGroup.Status.Conditions).To(HaveLen(1))
 				Expect(nbGroup.Status.Conditions[0].Status).To(BeEquivalentTo(v1.ConditionTrue))
-				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(netbirdiov1.NBSetupKeyReady))
+				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.NBSetupKeyReady))
 			})
 		})
 
@@ -123,7 +123,7 @@ var _ = Describe("NBGroup Controller", func() {
 				By("Reconciling the created resource")
 				controllerReconciler := &NBGroupReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -149,7 +149,7 @@ var _ = Describe("NBGroup Controller", func() {
 				Expect(*nbGroup.Status.GroupID).To(Equal("Test"))
 				Expect(nbGroup.Status.Conditions).To(HaveLen(1))
 				Expect(nbGroup.Status.Conditions[0].Status).To(BeEquivalentTo(v1.ConditionTrue))
-				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(netbirdiov1.NBSetupKeyReady))
+				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.NBSetupKeyReady))
 			})
 		})
 
@@ -172,7 +172,7 @@ var _ = Describe("NBGroup Controller", func() {
 					By("Reconciling the deleting resource")
 					controllerReconciler := &NBGroupReconciler{
 						Client:  k8sClient,
-						Netbird: netbirdClient,
+						openZro: openzroClient,
 					}
 
 					method := ""
@@ -198,7 +198,7 @@ var _ = Describe("NBGroup Controller", func() {
 					By("Reconciling the deleting resource")
 					controllerReconciler := &NBGroupReconciler{
 						Client:  k8sClient,
-						Netbird: netbirdClient,
+						openZro: openzroClient,
 					}
 
 					method := ""
@@ -222,12 +222,12 @@ var _ = Describe("NBGroup Controller", func() {
 			When("Group already exists in another namespace", func() {
 				It("Should delete NBGroup after linked failure", func() {
 					deleteGroup()
-					otherGroup := &netbirdiov1.NBGroup{
+					otherGroup := &openzrov1.NBGroup{
 						ObjectMeta: v1.ObjectMeta{
 							Name:      nbGroup.Name,
 							Namespace: "kube-system",
 						},
-						Spec: netbirdiov1.NBGroupSpec{
+						Spec: openzrov1.NBGroupSpec{
 							Name: nbGroup.Spec.Name,
 						},
 					}
@@ -239,7 +239,7 @@ var _ = Describe("NBGroup Controller", func() {
 					By("Reconciling the deleting resource")
 					controllerReconciler := &NBGroupReconciler{
 						Client:  k8sClient,
-						Netbird: netbirdClient,
+						openZro: openzroClient,
 					}
 
 					method := ""
@@ -266,7 +266,7 @@ var _ = Describe("NBGroup Controller", func() {
 			It("should re-use existing group ID", func() {
 				controllerReconciler := &NBGroupReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -295,15 +295,15 @@ var _ = Describe("NBGroup Controller", func() {
 				Expect(*nbGroup.Status.GroupID).To(Equal("Test"))
 				Expect(nbGroup.Status.Conditions).To(HaveLen(1))
 				Expect(nbGroup.Status.Conditions[0].Status).To(BeEquivalentTo(v1.ConditionTrue))
-				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(netbirdiov1.NBSetupKeyReady))
+				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.NBSetupKeyReady))
 			})
 		})
 
-		When("Group deleted from NetBird API", func() {
+		When("Group deleted from openZro API", func() {
 			It("Should requeue and create group on next run", func() {
 				controllerReconciler := &NBGroupReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {

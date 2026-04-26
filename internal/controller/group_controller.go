@@ -5,27 +5,27 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/k8sutil"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/k8sutil"
 )
 
 type GroupReconciler struct {
 	client.Client
 
-	Netbird *netbird.Client
+	openZro *openzro.Client
 }
 
-// +kubebuilder:rbac:groups=netbird.io,resources=groups,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=netbird.io,resources=groups/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=netbird.io,resources=groups/finalizers,verbs=update
+// +kubebuilder:rbac:groups=openzro.io,resources=groups,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=openzro.io,resources=groups/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=openzro.io,resources=groups/finalizers,verbs=update
 func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	group := &nbv1alpha1.Group{}
+	group := &ozv1alpha1.Group{}
 	err := r.Get(ctx, req.NamespacedName, group)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -47,15 +47,15 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			Name: group.Spec.Name,
 		}
 		if group.Status.GroupID != "" {
-			resp, err := r.Netbird.Groups.Update(ctx, group.Status.GroupID, groupReq)
-			if err != nil && !netbird.IsNotFound(err) {
+			resp, err := r.openZro.Groups.Update(ctx, group.Status.GroupID, groupReq)
+			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
 			if err == nil {
 				return resp.Id, nil
 			}
 		}
-		resp, err := r.Netbird.Groups.Create(ctx, groupReq)
+		resp, err := r.openZro.Groups.Create(ctx, groupReq)
 		if err != nil {
 			return "", err
 		}
@@ -66,7 +66,7 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	}
 	group.Status.GroupID = groupID
 
-	conditions.MarkTrue(group, nbv1alpha1.ReadyCondition, nbv1alpha1.ReconciledReason, "")
+	conditions.MarkTrue(group, ozv1alpha1.ReadyCondition, ozv1alpha1.ReconciledReason, "")
 	err = sp.Patch(ctx, group, patch.WithStatusObservedGeneration{})
 	if err != nil {
 		return ctrl.Result{}, err
@@ -74,10 +74,10 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 	return ctrl.Result{}, nil
 }
 
-func (r *GroupReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, group *nbv1alpha1.Group) (ctrl.Result, error) {
+func (r *GroupReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, group *ozv1alpha1.Group) (ctrl.Result, error) {
 	if group.Status.GroupID != "" {
-		err := r.Netbird.Groups.Delete(ctx, group.Status.GroupID)
-		if err != nil && !netbird.IsNotFound(err) {
+		err := r.openZro.Groups.Delete(ctx, group.Status.GroupID)
+		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
@@ -93,6 +93,6 @@ func (r *GroupReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialP
 // SetupWithManager sets up the controller with the Manager.
 func (r *GroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&nbv1alpha1.Group{}).
+		For(&ozv1alpha1.Group{}).
 		Complete(r)
 }

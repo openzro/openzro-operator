@@ -13,9 +13,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/netbirdmock"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/openzromock"
+	"github.com/openzro/openzro/shared/management/http/api"
 )
 
 var _ = Describe("NetworkRouter Controller", func() {
@@ -32,20 +32,20 @@ var _ = Describe("NetworkRouter Controller", func() {
 		}
 
 		BeforeEach(func() {
-			nbClient := netbirdmock.Client()
+			nbClient := openzromock.Client()
 			netRouterRec = &NetworkRouterReconciler{
 				Client:        k8sClient,
-				Netbird:       nbClient,
-				ClientImage:   "docker.io/netbirdio/netbird:latest",
-				ManagementURL: "https://netbird.io",
+				openZro:       nbClient,
+				ClientImage:   "docker.io/openzro/openzro:latest",
+				ManagementURL: "https://openzro.io",
 			}
 			setupKeyRec = &SetupKeyReconciler{
 				Client:  k8sClient,
-				Netbird: nbClient,
+				openZro: nbClient,
 			}
 			groupRec = &GroupReconciler{
 				Client:  k8sClient,
-				Netbird: nbClient,
+				openZro: nbClient,
 			}
 
 			ns := &corev1.Namespace{
@@ -75,29 +75,29 @@ var _ = Describe("NetworkRouter Controller", func() {
 				Name:   "cluster.local",
 				Domain: "cluster.local",
 			}
-			_, err := netRouterRec.Netbird.DNSZones.CreateZone(ctx, zoneReq)
+			_, err := netRouterRec.openZro.DNSZones.CreateZone(ctx, zoneReq)
 			Expect(err).ToNot(HaveOccurred())
 
-			netRouter := &nbv1alpha1.NetworkRouter{
+			netRouter := &ozv1alpha1.NetworkRouter{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nn.Name,
 					Namespace: nn.Namespace,
 				},
-				Spec: nbv1alpha1.NetworkRouterSpec{
-					DNSZoneRef: nbv1alpha1.DNSZoneReference{
+				Spec: ozv1alpha1.NetworkRouterSpec{
+					DNSZoneRef: ozv1alpha1.DNSZoneReference{
 						Name: "cluster.local",
 					},
 				},
 			}
 			Expect(k8sClient.Create(ctx, netRouter)).To(Succeed())
 
-			group := &nbv1alpha1.Group{
+			group := &ozv1alpha1.Group{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("networkrouter-%s", netRouter.Name),
 					Namespace: nn.Namespace,
 				},
 			}
-			setupKey := &nbv1alpha1.SetupKey{
+			setupKey := &ozv1alpha1.SetupKey{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      fmt.Sprintf("networkrouter-%s", netRouter.Name),
 					Namespace: nn.Namespace,
@@ -124,7 +124,7 @@ var _ = Describe("NetworkRouter Controller", func() {
 			err = k8sClient.Get(ctx, nn, netRouter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(netRouter.Status.NetworkID).ToNot(BeEmpty())
-			_, err = netRouterRec.Netbird.Networks.Routers(netRouter.Status.NetworkID).Get(ctx, netRouter.Status.RoutingPeerID)
+			_, err = netRouterRec.openZro.Networks.Routers(netRouter.Status.NetworkID).Get(ctx, netRouter.Status.RoutingPeerID)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = k8sClient.Get(ctx, client.ObjectKeyFromObject(group), group)
@@ -139,7 +139,7 @@ var _ = Describe("NetworkRouter Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dep.OwnerReferences[0].UID).To(Equal(netRouter.UID))
 
-			routingPeerResp, err := netRouterRec.Netbird.Networks.Routers(netRouter.Status.NetworkID).Get(ctx, netRouter.Status.RoutingPeerID)
+			routingPeerResp, err := netRouterRec.openZro.Networks.Routers(netRouter.Status.NetworkID).Get(ctx, netRouter.Status.RoutingPeerID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect((*routingPeerResp.PeerGroups)[0]).To(Equal(group.Status.GroupID))
 		})

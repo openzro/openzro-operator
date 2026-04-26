@@ -3,7 +3,7 @@ package v1
 import (
 	"maps"
 
-	"github.com/netbirdio/kubernetes-operator/internal/util"
+	"github.com/openzro/openzro-operator/internal/util"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -79,7 +79,7 @@ func (a NBResourceStatus) Equal(b NBResourceStatus) bool {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// NBResource is the Schema for the nbresources API.
+// NBResource is the Schema for the ozresources API.
 type NBResource struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

@@ -5,9 +5,9 @@ package v1alpha1
 // DNSZoneReferenceApplyConfiguration represents a declarative configuration of the DNSZoneReference type for use
 // with apply.
 //
-// DNSZoneReference references a Netbird DNS zone by domain name.
+// DNSZoneReference references a openZro DNS zone by domain name.
 type DNSZoneReferenceApplyConfiguration struct {
-	// Name is the domain name of an existing Netbird DNS zone, e.g. "example.com".
+	// Name is the domain name of an existing openZro DNS zone, e.g. "example.com".
 	Name *string `json:"name,omitempty"`
 }
 

@@ -1,7 +1,7 @@
 package v1
 
 import (
-	"github.com/netbirdio/kubernetes-operator/internal/util"
+	"github.com/openzro/openzro-operator/internal/util"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -51,7 +51,7 @@ func (a NBRoutingPeerStatus) Equal(b NBRoutingPeerStatus) bool {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// NBRoutingPeer is the Schema for the nbroutingpeers API.
+// NBRoutingPeer is the Schema for the ozroutingpeers API.
 type NBRoutingPeer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

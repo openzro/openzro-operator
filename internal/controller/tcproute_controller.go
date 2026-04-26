@@ -14,10 +14,10 @@ import (
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"github.com/fluxcd/pkg/runtime/patch"
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/gatewayutil"
-	"github.com/netbirdio/kubernetes-operator/internal/k8sutil"
-	nbv1alpha1ac "github.com/netbirdio/kubernetes-operator/pkg/applyconfigurations/api/v1alpha1"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/gatewayutil"
+	"github.com/openzro/openzro-operator/internal/k8sutil"
+	ozv1alpha1ac "github.com/openzro/openzro-operator/pkg/applyconfigurations/api/v1alpha1"
 )
 
 type TCPRouteReconciler struct {
@@ -86,11 +86,11 @@ func (r *TCPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 			if err != nil {
 				return ctrl.Result{}, err
 			}
-			netResourceAC := nbv1alpha1ac.NetworkResource(svc.Name, svc.Namespace).
+			netResourceAC := ozv1alpha1ac.NetworkResource(svc.Name, svc.Namespace).
 				WithOwnerReferences(controllerRef, ownerRef).
 				WithSpec(
-					nbv1alpha1ac.NetworkResourceSpec().
-						WithNetworkRouterRef(nbv1alpha1ac.CrossNamespaceReference().WithName(netRouter.Name).WithNamespace(netRouter.Namespace)).
+					ozv1alpha1ac.NetworkResourceSpec().
+						WithNetworkRouterRef(ozv1alpha1ac.CrossNamespaceReference().WithName(netRouter.Name).WithNamespace(netRouter.Namespace)).
 						WithServiceRef(corev1.LocalObjectReference{Name: svc.Name}),
 				)
 			err = r.Client.Apply(ctx, netResourceAC)
@@ -129,7 +129,7 @@ func (r *TCPRouteReconciler) reconcileDelete(ctx context.Context, sp *patch.Seri
 			}
 		}
 		for _, svc := range svcIdx {
-			netResource := &nbv1alpha1.NetworkResource{
+			netResource := &ozv1alpha1.NetworkResource{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      svc.Name,
 					Namespace: svc.Namespace,

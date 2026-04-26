@@ -34,8 +34,8 @@ import (
 
 	foobarv1 "k8s.io/api/core/v1"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	netbirdiov1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	openzrov1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -62,20 +62,20 @@ var _ = BeforeSuite(func() {
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	var err error
-	err = netbirdiov1.AddToScheme(scheme.Scheme)
+	err = openzrov1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = foobarv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = netbirdiov1alpha1.AddToScheme(scheme.Scheme)
+	err = openzrov1alpha1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:scheme
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "helm", "kubernetes-operator", "crds")},
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "helm", "openzro-operator", "crds")},
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -89,7 +89,7 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	Expect(cfg).NotTo(BeNil())
 
-	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme, FieldOwner: "netbird-operator"})
+	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme, FieldOwner: "openzro-operator"})
 
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())

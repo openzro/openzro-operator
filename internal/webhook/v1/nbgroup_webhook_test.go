@@ -7,19 +7,19 @@ import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
 )
 
 var _ = Describe("NBGroup Webhook", func() {
 	var (
-		obj       *netbirdiov1.NBGroup
-		oldObj    *netbirdiov1.NBGroup
+		obj       *openzrov1.NBGroup
+		oldObj    *openzrov1.NBGroup
 		validator NBGroupCustomValidator
 	)
 
 	BeforeEach(func() {
-		obj = &netbirdiov1.NBGroup{}
-		oldObj = &netbirdiov1.NBGroup{}
+		obj = &openzrov1.NBGroup{}
+		oldObj = &openzrov1.NBGroup{}
 		validator = NBGroupCustomValidator{
 			client: k8sClient,
 		}
@@ -40,7 +40,7 @@ var _ = Describe("NBGroup Webhook", func() {
 		})
 		When("There are no owners", func() {
 			It("should allow deletion", func() {
-				obj = &netbirdiov1.NBGroup{
+				obj = &openzrov1.NBGroup{
 					ObjectMeta: v1.ObjectMeta{
 						Name:            "test",
 						Namespace:       "default",
@@ -52,13 +52,13 @@ var _ = Describe("NBGroup Webhook", func() {
 		})
 		When("There deleted owners", func() {
 			It("should allow deletion", func() {
-				obj = &netbirdiov1.NBGroup{
+				obj = &openzrov1.NBGroup{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 						OwnerReferences: []v1.OwnerReference{
 							{
-								APIVersion: netbirdiov1.GroupVersion.Identifier(),
+								APIVersion: openzrov1.GroupVersion.Identifier(),
 								Kind:       "NBResource",
 								Name:       "notexist",
 								UID:        obj.UID,
@@ -71,12 +71,12 @@ var _ = Describe("NBGroup Webhook", func() {
 		})
 		When("NBResource owner exists", func() {
 			BeforeEach(func() {
-				nbResource := &netbirdiov1.NBResource{
+				nbResource := &openzrov1.NBResource{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "isexist",
 						Namespace: "default",
 					},
-					Spec: netbirdiov1.NBResourceSpec{
+					Spec: openzrov1.NBResourceSpec{
 						Name:      "test1",
 						NetworkID: "test2",
 						Address:   "test3",
@@ -86,13 +86,13 @@ var _ = Describe("NBGroup Webhook", func() {
 
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				obj = &netbirdiov1.NBGroup{
+				obj = &openzrov1.NBGroup{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 						OwnerReferences: []v1.OwnerReference{
 							{
-								APIVersion: netbirdiov1.GroupVersion.Identifier(),
+								APIVersion: openzrov1.GroupVersion.Identifier(),
 								Kind:       nbResource.Kind,
 								Name:       nbResource.Name,
 								UID:        nbResource.UID,
@@ -102,7 +102,7 @@ var _ = Describe("NBGroup Webhook", func() {
 				}
 			})
 			AfterEach(func() {
-				nbResource := &netbirdiov1.NBResource{}
+				nbResource := &openzrov1.NBResource{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "isexist"}, nbResource)
 				if !errors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
@@ -122,41 +122,41 @@ var _ = Describe("NBGroup Webhook", func() {
 		})
 		When("NBRoutingPeer owner exists", func() {
 			BeforeEach(func() {
-				nbrp := &netbirdiov1.NBRoutingPeer{
+				ozrp := &openzrov1.NBRoutingPeer{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "isexist",
 						Namespace: "default",
 					},
-					Spec: netbirdiov1.NBRoutingPeerSpec{},
+					Spec: openzrov1.NBRoutingPeerSpec{},
 				}
 
-				Expect(k8sClient.Create(ctx, nbrp)).To(Succeed())
+				Expect(k8sClient.Create(ctx, ozrp)).To(Succeed())
 
-				obj = &netbirdiov1.NBGroup{
+				obj = &openzrov1.NBGroup{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 						OwnerReferences: []v1.OwnerReference{
 							{
-								APIVersion: netbirdiov1.GroupVersion.Identifier(),
-								Kind:       nbrp.Kind,
-								Name:       nbrp.Name,
-								UID:        nbrp.UID,
+								APIVersion: openzrov1.GroupVersion.Identifier(),
+								Kind:       ozrp.Kind,
+								Name:       ozrp.Name,
+								UID:        ozrp.UID,
 							},
 						},
 					},
 				}
 			})
 			AfterEach(func() {
-				nbrp := &netbirdiov1.NBRoutingPeer{}
-				err := k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "isexist"}, nbrp)
+				ozrp := &openzrov1.NBRoutingPeer{}
+				err := k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "isexist"}, ozrp)
 				if !errors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
-					if len(nbrp.Finalizers) > 0 {
-						nbrp.Finalizers = nil
-						Expect(k8sClient.Update(ctx, nbrp)).To(Succeed())
+					if len(ozrp.Finalizers) > 0 {
+						ozrp.Finalizers = nil
+						Expect(k8sClient.Update(ctx, ozrp)).To(Succeed())
 					}
-					err = k8sClient.Delete(ctx, nbrp)
+					err = k8sClient.Delete(ctx, ozrp)
 					if !errors.IsNotFound(err) {
 						Expect(err).NotTo(HaveOccurred())
 					}

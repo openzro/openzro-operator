@@ -25,14 +25,14 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	"github.com/netbirdio/kubernetes-operator/test/utils"
+	"github.com/openzro/openzro-operator/test/utils"
 )
 
 // namespace where the project is deployed in
-const namespace = "netbird"
+const namespace = "openzro"
 
 // metricsServiceName is the name of the metrics service of the project
-const metricsServiceName = "kubernetes-operator-metrics"
+const metricsServiceName = "openzro-operator-metrics"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -57,13 +57,13 @@ var _ = Describe("Manager", Ordered, func() {
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to install CRDs")
 
-		By("deploying the kubernetes-operator")
+		By("deploying the openzro-operator")
 		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage))
 		out, err := utils.Run(cmd)
 		if err != nil {
 			fmt.Println(out)
 		}
-		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the kubernetes-operator")
+		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the openzro-operator")
 	})
 
 	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
@@ -73,7 +73,7 @@ var _ = Describe("Manager", Ordered, func() {
 		cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
 		_, _ = utils.Run(cmd)
 
-		By("undeploying the kubernetes-operator")
+		By("undeploying the openzro-operator")
 		cmd = exec.Command("make", "undeploy")
 		_, _ = utils.Run(cmd)
 
@@ -134,11 +134,11 @@ var _ = Describe("Manager", Ordered, func() {
 
 	Context("Manager", func() {
 		It("should run successfully", func() {
-			By("validating that the kubernetes-operator pod is running as expected")
+			By("validating that the openzro-operator pod is running as expected")
 			verifyControllerUp := func(g Gomega) {
-				// Get the name of the kubernetes-operator pod
+				// Get the name of the openzro-operator pod
 				cmd := exec.Command("kubectl", "get",
-					"pods", "-l", "app.kubernetes.io/component=operator,app.kubernetes.io/name=kubernetes-operator",
+					"pods", "-l", "app.kubernetes.io/component=operator,app.kubernetes.io/name=openzro-operator",
 					"-o", "go-template={{ range .items }}"+
 						"{{ if not .metadata.deletionTimestamp }}"+
 						"{{ .metadata.name }}"+
@@ -147,11 +147,11 @@ var _ = Describe("Manager", Ordered, func() {
 				)
 
 				podOutput, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve kubernetes-operator pod information")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve openzro-operator pod information")
 				podNames := utils.GetNonEmptyLines(podOutput)
 				g.Expect(podNames).To(HaveLen(1), "expected 1 controller pod running")
 				controllerPodName = podNames[0]
-				g.Expect(controllerPodName).To(ContainSubstring("kubernetes-operator"))
+				g.Expect(controllerPodName).To(ContainSubstring("openzro-operator"))
 
 				// Validate the pod's status
 				cmd = exec.Command("kubectl", "get",
@@ -161,7 +161,7 @@ var _ = Describe("Manager", Ordered, func() {
 				)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(output).To(Equal("True"), "Incorrect kubernetes-operator pod status")
+				g.Expect(output).To(Equal("True"), "Incorrect openzro-operator pod status")
 			}
 			Eventually(verifyControllerUp).Should(Succeed())
 		})
@@ -243,7 +243,7 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should provisioned cert-manager", func() {
 			By("validating that cert-manager has the certificate Secret")
 			verifyCertManager := func(g Gomega) {
-				cmd := exec.Command("kubectl", "get", "secrets", "kubernetes-operator-tls", "-n", namespace)
+				cmd := exec.Command("kubectl", "get", "secrets", "openzro-operator-tls", "-n", namespace)
 				_, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 			}
@@ -255,7 +255,7 @@ var _ = Describe("Manager", Ordered, func() {
 			verifyCAInjection := func(g Gomega) {
 				cmd := exec.Command("kubectl", "get",
 					"mutatingwebhookconfigurations.admissionregistration.k8s.io",
-					"kubernetes-operator-mpod-webhook",
+					"openzro-operator-mpod-webhook",
 					"-o", "go-template={{ range .webhooks }}{{ .clientConfig.caBundle }}{{ end }}")
 				mwhOutput, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
@@ -271,14 +271,14 @@ var _ = Describe("Manager", Ordered, func() {
 						"kubectl", "create", "secret", "generic",
 						"--from-literal", "sk=EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE",
 						"-n", "default",
-						"netbird-sk",
+						"openzro-sk",
 					)
 					_, err := utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
 				})
 
 				AfterAll(func() {
-					cmd := exec.Command("kubectl", "delete", "--ignore-not-found", "secret", "netbird-sk")
+					cmd := exec.Command("kubectl", "delete", "--ignore-not-found", "secret", "openzro-sk")
 					_, err := utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
 					cmd = exec.Command("kubectl", "delete", "--ignore-not-found", "NBSetupKey", "main")
@@ -289,15 +289,15 @@ var _ = Describe("Manager", Ordered, func() {
 				It("should allow setupkey resource to be created", func() {
 					cmd := exec.Command("kubectl", "apply", "-f", "-")
 					cmd.Stdin = strings.NewReader(`{
-							"apiVersion": "netbird.io/v1",
+							"apiVersion": "openzro.io/v1",
 							"kind": "NBSetupKey",
 							"metadata": {
 								"name": "main"
 							},
 							"spec": {
-								"managementURL": "https://netbird.example.com",
+								"managementURL": "https://openzro.example.com",
 								"secretKeyRef": {
-									"name": "netbird-sk",
+									"name": "openzro-sk",
 									"key": "sk"
 								}
 							}
@@ -311,7 +311,7 @@ var _ = Describe("Manager", Ordered, func() {
 					verifyNBSetupKeyStatus := func(g Gomega) {
 						cmd := exec.Command(
 							"kubectl", "get",
-							"nbsetupkeys", "main",
+							"ozsetupkeys", "main",
 							"-o", "jsonpath={.status.conditions[0].status}",
 						)
 						vnbskOutput, err := utils.Run(cmd)
@@ -321,20 +321,20 @@ var _ = Describe("Manager", Ordered, func() {
 					Eventually(verifyNBSetupKeyStatus).Should(Succeed())
 				})
 
-				It("should inject netbird container into a new pod with annotation", func() {
+				It("should inject openzro container into a new pod with annotation", func() {
 					cmd := exec.Command(
 						"kubectl", "run", "test-pod-inject",
 						"--dry-run=server", "--image=busybox",
-						"--annotations", "netbird.io/setup-key=main",
+						"--annotations", "openzro.io/setup-key=main",
 						"-n", "default",
 						"-o", "jsonpath={.spec.containers[1].name}",
 					)
 					out, err := utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(out).To(ContainSubstring("netbird"))
+					Expect(out).To(ContainSubstring("openzro"))
 				})
 
-				It("should not inject netbird container into a new pod without annotation", func() {
+				It("should not inject openzro container into a new pod without annotation", func() {
 					cmd := exec.Command(
 						"kubectl", "run", "test-pod-inject",
 						"--dry-run=server", "--image=busybox",
@@ -343,14 +343,14 @@ var _ = Describe("Manager", Ordered, func() {
 					)
 					out, err := utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
-					Expect(out).NotTo(ContainSubstring("netbird"))
+					Expect(out).NotTo(ContainSubstring("openzro"))
 				})
 
 				It("should fail new pod with incorrect annotation", func() {
 					cmd := exec.Command(
 						"kubectl", "run", "test-pod-inject",
 						"--dry-run=server", "--image=busybox",
-						"--annotations", "netbird.io/setup-key=nothing",
+						"--annotations", "openzro.io/setup-key=nothing",
 						"-n", "default",
 						"-o", "jsonpath={.spec.containers}",
 					)
@@ -365,22 +365,22 @@ var _ = Describe("Manager", Ordered, func() {
 						"kubectl", "create", "secret", "generic",
 						"--from-literal", "sk=EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE",
 						"-n", "default",
-						"netbird-sk",
+						"openzro-sk",
 					)
 					_, err := utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
 
 					cmd = exec.Command("kubectl", "apply", "-f", "-")
 					cmd.Stdin = strings.NewReader(`{
-							"apiVersion": "netbird.io/v1",
+							"apiVersion": "openzro.io/v1",
 							"kind": "NBSetupKey",
 							"metadata": {
 								"name": "main"
 							},
 							"spec": {
-								"managementURL": "https://netbird.example.com",
+								"managementURL": "https://openzro.example.com",
 								"secretKeyRef": {
-									"name": "netbird-sk",
+									"name": "openzro-sk",
 									"key": "sk"
 								}
 							}
@@ -391,7 +391,7 @@ var _ = Describe("Manager", Ordered, func() {
 				})
 
 				AfterAll(func() {
-					cmd := exec.Command("kubectl", "delete", "--ignore-not-found", "secret", "netbird-sk")
+					cmd := exec.Command("kubectl", "delete", "--ignore-not-found", "secret", "openzro-sk")
 					_, err := utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
 					cmd = exec.Command("kubectl", "delete", "--ignore-not-found", "NBSetupKey", "main")
@@ -403,7 +403,7 @@ var _ = Describe("Manager", Ordered, func() {
 					verifyNBSetupKeyStatus := func(g Gomega) {
 						cmd := exec.Command(
 							"kubectl", "get",
-							"nbsetupkeys", "main",
+							"ozsetupkeys", "main",
 							"-o", "jsonpath={.status.conditions[0].status}",
 						)
 						vnbskOutput, err := utils.Run(cmd)
@@ -421,7 +421,7 @@ var _ = Describe("Manager", Ordered, func() {
 							"kind": "Secret",
 							"apiVersion": "v1",
 							"metadata": {
-									"name": "netbird-sk"
+									"name": "openzro-sk"
 							},
 							"stringData": {
 									"sk": "WewWewInvalidWewWew"
@@ -435,7 +435,7 @@ var _ = Describe("Manager", Ordered, func() {
 					verifyNBSetupKeyStatus := func(g Gomega) {
 						cmd := exec.Command(
 							"kubectl", "get",
-							"nbsetupkeys", "main",
+							"ozsetupkeys", "main",
 							"-o", "jsonpath={.status.conditions[0].status}",
 						)
 						vnbskOutput, err := utils.Run(cmd)

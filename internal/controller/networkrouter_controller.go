@@ -10,10 +10,10 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	"github.com/netbirdio/kubernetes-operator/internal/k8sutil"
-	"github.com/netbirdio/kubernetes-operator/internal/netbirdutil"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	"github.com/openzro/openzro-operator/internal/k8sutil"
+	"github.com/openzro/openzro-operator/internal/openzroutil"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -26,25 +26,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	nbv1alpha1ac "github.com/netbirdio/kubernetes-operator/pkg/applyconfigurations/api/v1alpha1"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	ozv1alpha1ac "github.com/openzro/openzro-operator/pkg/applyconfigurations/api/v1alpha1"
 )
 
 type NetworkRouterReconciler struct {
 	client.Client
 
-	Netbird       *netbird.Client
+	openZro       *openzro.Client
 	ManagementURL string
 	ClientImage   string
 }
 
-// +kubebuilder:rbac:groups=netbird.io,resources=networkrouters,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=netbird.io,resources=networkrouters/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=netbird.io,resources=networkrouters/finalizers,verbs=update
+// +kubebuilder:rbac:groups=openzro.io,resources=networkrouters,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=openzro.io,resources=networkrouters/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=openzro.io,resources=networkrouters/finalizers,verbs=update
 
 // nolint:gocyclo
 func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	netRouter := &nbv1alpha1.NetworkRouter{}
+	netRouter := &ozv1alpha1.NetworkRouter{}
 	err := r.Get(ctx, req.NamespacedName, netRouter)
 	if err != nil {
 		return ctrl.Result{}, client.IgnoreNotFound(err)
@@ -61,7 +61,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Ensure the DNS Zone exists.
-	_, err = netbirdutil.GetDNSZoneByName(ctx, r.Netbird, netRouter.Spec.DNSZoneRef.Name)
+	_, err = openzroutil.GetDNSZoneByName(ctx, r.openZro, netRouter.Spec.DNSZoneRef.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -73,15 +73,15 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Name: netRouter.Name,
 		}
 		if netRouter.Status.NetworkID != "" {
-			networkResp, err := r.Netbird.Networks.Update(ctx, netRouter.Status.NetworkID, networkReq)
-			if err != nil && !netbird.IsNotFound(err) {
+			networkResp, err := r.openZro.Networks.Update(ctx, netRouter.Status.NetworkID, networkReq)
+			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
 			if err == nil {
 				return networkResp.Id, nil
 			}
 		}
-		networkResp, err := r.Netbird.Networks.Create(ctx, networkReq)
+		networkResp, err := r.openZro.Networks.Create(ctx, networkReq)
 		if err != nil {
 			return "", err
 		}
@@ -96,22 +96,22 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
-	// Calculate unique suffix used for Netbird resources.
+	// Calculate unique suffix used for openZro resources.
 	sum := sha256.Sum256([]byte(netRouter.UID))
 	uniqueSuffix := networkID + "-" + fmt.Sprintf("%x", sum[:4])[:8]
 
 	// Create the group used by the router to discover peers.
-	groupAC := nbv1alpha1ac.Group(fmt.Sprintf("networkrouter-%s", netRouter.Name), req.Namespace).
+	groupAC := ozv1alpha1ac.Group(fmt.Sprintf("networkrouter-%s", netRouter.Name), req.Namespace).
 		WithOwnerReferences(ownerRef).
 		WithSpec(
-			nbv1alpha1ac.GroupSpec().
+			ozv1alpha1ac.GroupSpec().
 				WithName(fmt.Sprintf("networkrouter-%s", uniqueSuffix)),
 		)
 	err = r.Client.Apply(ctx, groupAC)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	group := &nbv1alpha1.Group{
+	group := &ozv1alpha1.Group{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      *groupAC.Name,
 			Namespace: *groupAC.Namespace,
@@ -126,19 +126,19 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Create the setup key used by routing peers.
-	setupKeyAC := nbv1alpha1ac.SetupKey(fmt.Sprintf("networkrouter-%s", netRouter.Name), req.Namespace).
+	setupKeyAC := ozv1alpha1ac.SetupKey(fmt.Sprintf("networkrouter-%s", netRouter.Name), req.Namespace).
 		WithOwnerReferences(ownerRef).
 		WithSpec(
-			nbv1alpha1ac.SetupKeySpec().
+			ozv1alpha1ac.SetupKeySpec().
 				WithName(fmt.Sprintf("networkrouter-%s", uniqueSuffix)).
 				WithEphemeral(true).
-				WithAutoGroups(nbv1alpha1ac.GroupReference().WithID(group.Status.GroupID)),
+				WithAutoGroups(ozv1alpha1ac.GroupReference().WithID(group.Status.GroupID)),
 		)
 	err = r.Client.Apply(ctx, setupKeyAC)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	setupKey := nbv1alpha1.SetupKey{
+	setupKey := ozv1alpha1.SetupKey{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      *setupKeyAC.Name,
 			Namespace: *setupKeyAC.Namespace,
@@ -152,7 +152,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	// Create the routing peer in netbird.
+	// Create the routing peer in openzro.
 	routingPeerID, err := func() (string, error) {
 		routerReq := api.NetworkRouterRequest{
 			Enabled:    true,
@@ -161,15 +161,15 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			PeerGroups: ptr.To([]string{group.Status.GroupID}),
 		}
 		if netRouter.Status.RoutingPeerID != "" {
-			resp, err := r.Netbird.Networks.Routers(networkID).Update(ctx, netRouter.Status.RoutingPeerID, routerReq)
-			if err != nil && !netbird.IsNotFound(err) {
+			resp, err := r.openZro.Networks.Routers(networkID).Update(ctx, netRouter.Status.RoutingPeerID, routerReq)
+			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
 			if err == nil {
 				return resp.Id, nil
 			}
 		}
-		resp, err := r.Netbird.Networks.Routers(networkID).Create(ctx, routerReq)
+		resp, err := r.openZro.Networks.Routers(networkID).Create(ctx, routerReq)
 		if err != nil {
 			return "", err
 		}
@@ -194,11 +194,11 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		WithLabels(selectorLabels).
 		WithSpec(corev1ac.PodSpec().
 			WithContainers(corev1ac.Container().
-				WithName("netbird").
+				WithName("openzro").
 				WithImage(r.ClientImage).
 				WithEnv(
 					corev1ac.EnvVar().
-						WithName("NB_SETUP_KEY").
+						WithName("OZ_SETUP_KEY").
 						WithValueFrom(corev1ac.EnvVarSource().
 							WithSecretKeyRef(corev1ac.SecretKeySelector().
 								WithName(setupKey.SecretName()).
@@ -206,14 +206,14 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 							),
 						),
 					corev1ac.EnvVar().
-						WithName("NB_MANAGEMENT_URL").
+						WithName("OZ_MANAGEMENT_URL").
 						WithValue(r.ManagementURL),
 					corev1ac.EnvVar().
-						WithName("NB_LOG_LEVEL").
+						WithName("OZ_LOG_LEVEL").
 						WithValue("info"),
 				).
-				WithStartupProbe(corev1ac.Probe().WithExec(corev1ac.ExecAction().WithCommand("netbird", "status", "--check", "startup"))).
-				WithReadinessProbe(corev1ac.Probe().WithExec(corev1ac.ExecAction().WithCommand("netbird", "status", "--check", "ready"))).
+				WithStartupProbe(corev1ac.Probe().WithExec(corev1ac.ExecAction().WithCommand("openzro", "status", "--check", "startup"))).
+				WithReadinessProbe(corev1ac.Probe().WithExec(corev1ac.ExecAction().WithCommand("openzro", "status", "--check", "ready"))).
 				WithSecurityContext(corev1ac.SecurityContext().
 					WithCapabilities(corev1ac.Capabilities().
 						WithAdd("NET_ADMIN").
@@ -282,7 +282,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, nil
 	}
 
-	conditions.MarkTrue(netRouter, nbv1alpha1.ReadyCondition, nbv1alpha1.ReconciledReason, "")
+	conditions.MarkTrue(netRouter, ozv1alpha1.ReadyCondition, ozv1alpha1.ReconciledReason, "")
 	err = sp.Patch(ctx, netRouter, patch.WithStatusObservedGeneration{})
 	if err != nil {
 		return ctrl.Result{}, err
@@ -290,16 +290,16 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	return ctrl.Result{RequeueAfter: 15 * time.Minute}, nil
 }
 
-func (r *NetworkRouterReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, netRouter *nbv1alpha1.NetworkRouter) (ctrl.Result, error) {
+func (r *NetworkRouterReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, netRouter *ozv1alpha1.NetworkRouter) (ctrl.Result, error) {
 	if netRouter.Status.RoutingPeerID != "" {
-		err := r.Netbird.Networks.Routers(netRouter.Status.NetworkID).Delete(ctx, netRouter.Status.RoutingPeerID)
-		if err != nil && !netbird.IsNotFound(err) {
+		err := r.openZro.Networks.Routers(netRouter.Status.NetworkID).Delete(ctx, netRouter.Status.RoutingPeerID)
+		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
 	if netRouter.Status.NetworkID != "" {
-		err := r.Netbird.Networks.Delete(ctx, netRouter.Status.NetworkID)
-		if err != nil && !netbird.IsNotFound(err) {
+		err := r.openZro.Networks.Delete(ctx, netRouter.Status.NetworkID)
+		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
@@ -314,9 +314,9 @@ func (r *NetworkRouterReconciler) reconcileDelete(ctx context.Context, sp *patch
 
 func (r *NetworkRouterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&nbv1alpha1.NetworkRouter{}).
-		Owns(&nbv1alpha1.Group{}).
-		Owns(&nbv1alpha1.SetupKey{}).
+		For(&ozv1alpha1.NetworkRouter{}).
+		Owns(&ozv1alpha1.Group{}).
+		Owns(&ozv1alpha1.SetupKey{}).
 		Owns(&appsv1.Deployment{}).
 		Complete(r)
 }

@@ -10,7 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
 )
 
 func GetParentGateway(ctx context.Context, k8sClient client.Client, parent gwv1.ParentReference, namespace, controllerName string) (*gwv1.Gateway, error) {
@@ -36,12 +36,12 @@ func GetParentGateway(ctx context.Context, k8sClient client.Client, parent gwv1.
 	return gw, nil
 }
 
-func GetGatewayNetworkRouter(ctx context.Context, k8sClient client.Client, gw *gwv1.Gateway) (*nbv1alpha1.NetworkRouter, error) {
+func GetGatewayNetworkRouter(ctx context.Context, k8sClient client.Client, gw *gwv1.Gateway) (*ozv1alpha1.NetworkRouter, error) {
 	netRouterName, err := GetNetworkRouterName(gw.Spec.Listeners)
 	if err != nil {
 		return nil, err
 	}
-	netRouter := &nbv1alpha1.NetworkRouter{}
+	netRouter := &ozv1alpha1.NetworkRouter{}
 	err = k8sClient.Get(ctx, types.NamespacedName{Namespace: gw.Namespace, Name: netRouterName}, netRouter)
 	if err != nil {
 		return nil, err
@@ -51,14 +51,14 @@ func GetGatewayNetworkRouter(ctx context.Context, k8sClient client.Client, gw *g
 
 func GetNetworkRouterName(listeners []gwv1.Listener) (string, error) {
 	if len(listeners) > 1 {
-		return "", errors.New("netbird Gateway only supports a single listener")
+		return "", errors.New("openzro Gateway only supports a single listener")
 	}
 	group, kind, ok := strings.Cut(string(listeners[0].Protocol), "/")
 	if !ok {
-		return "", fmt.Errorf("invalid protocol %s, expected gateway.netbird.io/NetworkRouter", listeners[0].Protocol)
+		return "", fmt.Errorf("invalid protocol %s, expected gateway.openzro.io/NetworkRouter", listeners[0].Protocol)
 	}
-	if group != "gateway.netbird.io" || kind != "NetworkRouter" {
-		return "", fmt.Errorf("invalid group %s and kind %s, expected gateway.netbird.io/NetworkRouter", group, kind)
+	if group != "gateway.openzro.io" || kind != "NetworkRouter" {
+		return "", fmt.Errorf("invalid group %s and kind %s, expected gateway.openzro.io/NetworkRouter", group, kind)
 	}
 	return string(listeners[0].Name), nil
 }

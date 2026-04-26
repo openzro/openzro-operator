@@ -1,10 +1,10 @@
 # API Reference
 
 ## Packages
-- [netbird.io/v1alpha1](#netbirdiov1alpha1)
+- [openzro.io/v1alpha1](#openzrov1alpha1)
 
 
-## netbird.io/v1alpha1
+## openzro.io/v1alpha1
 
 Package v1alpha1 contains API Schema definitions for the  v1alpha1 API group.
 
@@ -56,7 +56,7 @@ _Appears in:_
 
 
 
-DNSZoneReference references a Netbird DNS zone by domain name.
+DNSZoneReference references a openZro DNS zone by domain name.
 
 
 
@@ -65,7 +65,7 @@ _Appears in:_
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `name` _string_ | Name is the domain name of an existing Netbird DNS zone, e.g. "example.com". |  | Required: \{\} <br /> |
+| `name` _string_ | Name is the domain name of an existing openZro DNS zone, e.g. "example.com". |  | Required: \{\} <br /> |
 
 
 #### Group
@@ -80,7 +80,7 @@ Group is the Schema for the groups API.
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `apiVersion` _string_ | `netbird.io/v1alpha1` | | |
+| `apiVersion` _string_ | `openzro.io/v1alpha1` | | |
 | `kind` _string_ | `Group` | | |
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  | Optional: \{\} <br /> |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  | Optional: \{\} <br /> |
@@ -172,7 +172,7 @@ NetworkResource is the Schema for the networkresources API.
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `apiVersion` _string_ | `netbird.io/v1alpha1` | | |
+| `apiVersion` _string_ | `openzro.io/v1alpha1` | | |
 | `kind` _string_ | `NetworkResource` | | |
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  | Optional: \{\} <br /> |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  | Optional: \{\} <br /> |
@@ -232,7 +232,7 @@ NetworkRouter is the Schema for the networkrouters API.
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `apiVersion` _string_ | `netbird.io/v1alpha1` | | |
+| `apiVersion` _string_ | `openzro.io/v1alpha1` | | |
 | `kind` _string_ | `NetworkRouter` | | |
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  | Optional: \{\} <br /> |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  | Optional: \{\} <br /> |
@@ -289,7 +289,7 @@ SetupKey is the Schema for the setupkeys API.
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `apiVersion` _string_ | `netbird.io/v1alpha1` | | |
+| `apiVersion` _string_ | `openzro.io/v1alpha1` | | |
 | `kind` _string_ | `SetupKey` | | |
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  | Optional: \{\} <br /> |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  | Optional: \{\} <br /> |
@@ -347,7 +347,7 @@ SidecarProfile is the Schema for the sidecarprofiles API.
 
 | Field | Description | Default | Validation |
 | --- | --- | --- | --- |
-| `apiVersion` _string_ | `netbird.io/v1alpha1` | | |
+| `apiVersion` _string_ | `openzro.io/v1alpha1` | | |
 | `kind` _string_ | `SidecarProfile` | | |
 | `kind` _string_ | Kind is a string value representing the REST resource this object represents.<br />Servers may infer this from the endpoint the client submits requests to.<br />Cannot be updated.<br />In CamelCase.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds |  | Optional: \{\} <br /> |
 | `apiVersion` _string_ | APIVersion defines the versioned schema of this representation of an object.<br />Servers should convert recognized schemas to the latest internal value, and<br />may reject unrecognized values.<br />More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources |  | Optional: \{\} <br /> |

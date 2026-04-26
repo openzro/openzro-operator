@@ -3,9 +3,9 @@
 package applyconfigurations
 
 import (
-	v1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	apiv1alpha1 "github.com/netbirdio/kubernetes-operator/pkg/applyconfigurations/api/v1alpha1"
-	internal "github.com/netbirdio/kubernetes-operator/pkg/applyconfigurations/internal"
+	v1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	apiv1alpha1 "github.com/openzro/openzro-operator/pkg/applyconfigurations/api/v1alpha1"
+	internal "github.com/openzro/openzro-operator/pkg/applyconfigurations/internal"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	managedfields "k8s.io/apimachinery/pkg/util/managedfields"
@@ -15,7 +15,7 @@ import (
 // apply configuration type exists for the given GroupVersionKind.
 func ForKind(kind schema.GroupVersionKind) interface{} {
 	switch kind {
-	// Group=netbird.io, Version=v1alpha1
+	// Group=openzro.io, Version=v1alpha1
 	case v1alpha1.SchemeGroupVersion.WithKind("ContainerOverride"):
 		return &apiv1alpha1.ContainerOverrideApplyConfiguration{}
 	case v1alpha1.SchemeGroupVersion.WithKind("CrossNamespaceReference"):

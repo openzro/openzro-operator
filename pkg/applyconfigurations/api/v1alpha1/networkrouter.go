@@ -26,7 +26,7 @@ func NetworkRouter(name, namespace string) *NetworkRouterApplyConfiguration {
 	b.WithName(name)
 	b.WithNamespace(namespace)
 	b.WithKind("NetworkRouter")
-	b.WithAPIVersion("netbird.io/v1alpha1")
+	b.WithAPIVersion("openzro.io/v1alpha1")
 	return b
 }
 

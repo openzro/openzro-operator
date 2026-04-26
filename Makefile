@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= docker.io/netbirdio/kubernetes-operator:latest
+IMG ?= docker.io/openzro/openzro-operator:latest
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -20,7 +20,7 @@ all: build
 
 .PHONY: manifests
 manifests: ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	go tool controller-gen crd paths="./..." output:crd:artifacts:config=helm/kubernetes-operator/crds
+	go tool controller-gen crd paths="./..." output:crd:artifacts:config=helm/openzro-operator/crds
 	go tool crd-ref-docs --log-level error --output-path docs/api-reference.md --renderer markdown --source-path api/v1alpha1 --config docs/.crd-ref-docs.yaml
 
 .PHONY: generate
@@ -80,7 +80,7 @@ docker-build: ## Build docker image with the manager.
 .PHONY: build-installer
 build-installer: manifests ## Generate a consolidated YAML with CRDs and deployment.
 	mkdir -p manifests
-	$(HELM) template --include-crds kubernetes-operator helm/kubernetes-operator > manifests/install.yaml
+	$(HELM) template --include-crds openzro-operator helm/openzro-operator > manifests/install.yaml
 
 ##@ Deployment
 
@@ -90,19 +90,19 @@ endif
 
 .PHONY: install
 install: manifests ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUBECTL) apply --server-side -f helm/kubernetes-operator/crds
+	$(KUBECTL) apply --server-side -f helm/openzro-operator/crds
 
 .PHONY: uninstall
 uninstall: manifests ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUBECTL) delete -f helm/kubernetes-operator/crds
+	$(KUBECTL) delete -f helm/openzro-operator/crds
 
 .PHONY: deploy
 deploy: manifests ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	$(HELM) install -n netbird --create-namespace kubernetes-operator --set operator.image.tag=$(word 2,$(subst :, ,${IMG})) helm/kubernetes-operator
+	$(HELM) install -n openzro --create-namespace openzro-operator --set operator.image.tag=$(word 2,$(subst :, ,${IMG})) helm/openzro-operator
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(HELM) uninstall -n netbird kubernetes-operator
+	$(HELM) uninstall -n openzro openzro-operator
 
 ##@ Dependencies
 

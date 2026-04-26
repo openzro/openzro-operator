@@ -26,7 +26,7 @@ func SidecarProfile(name, namespace string) *SidecarProfileApplyConfiguration {
 	b.WithName(name)
 	b.WithNamespace(namespace)
 	b.WithKind("SidecarProfile")
-	b.WithAPIVersion("netbird.io/v1alpha1")
+	b.WithAPIVersion("openzro.io/v1alpha1")
 	return b
 }
 

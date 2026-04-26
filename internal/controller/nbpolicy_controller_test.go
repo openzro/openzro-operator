@@ -16,10 +16,10 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	netbirdiov1 "github.com/netbirdio/kubernetes-operator/api/v1"
-	"github.com/netbirdio/kubernetes-operator/internal/util"
-	netbird "github.com/netbirdio/netbird/shared/management/client/rest"
-	"github.com/netbirdio/netbird/shared/management/http/api"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	"github.com/openzro/openzro-operator/internal/util"
+	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	"github.com/openzro/openzro/shared/management/http/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
@@ -32,8 +32,8 @@ var _ = Describe("NBPolicy Controller", func() {
 		typeNamespacedName := types.NamespacedName{
 			Name: resourceName,
 		}
-		nbpolicy := &netbirdiov1.NBPolicy{}
-		var netbirdClient *netbird.Client
+		ozpolicy := &openzrov1.NBPolicy{}
+		var openzroClient *openzro.Client
 		var mux *http.ServeMux
 		var server *httptest.Server
 
@@ -41,29 +41,29 @@ var _ = Describe("NBPolicy Controller", func() {
 			ctrl.SetLogger(logr.New(GinkgoLogr.GetSink()))
 			mux = &http.ServeMux{}
 			server = httptest.NewServer(mux)
-			netbirdClient = netbird.New(server.URL, "ABC")
+			openzroClient = openzro.New(server.URL, "ABC")
 
 			By("creating the custom resource for the Kind NBPolicy")
-			err := k8sClient.Get(ctx, typeNamespacedName, nbpolicy)
+			err := k8sClient.Get(ctx, typeNamespacedName, ozpolicy)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &netbirdiov1.NBPolicy{
+				resource := &openzrov1.NBPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       resourceName,
-						Finalizers: []string{"netbird.io/cleanup"},
+						Finalizers: []string{"openzro.io/cleanup"},
 					},
-					Spec: netbirdiov1.NBPolicySpec{
+					Spec: openzrov1.NBPolicySpec{
 						Name:          "Test",
 						SourceGroups:  []string{"All"},
 						Bidirectional: true,
 					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-				nbpolicy = resource
+				ozpolicy = resource
 			}
 		})
 
 		AfterEach(func() {
-			resource := &netbirdiov1.NBPolicy{}
+			resource := &openzrov1.NBPolicy{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
@@ -77,20 +77,20 @@ var _ = Describe("NBPolicy Controller", func() {
 				Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 			}
 
-			nbresource := &netbirdiov1.NBResource{}
-			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, nbresource)
+			ozresource := &openzrov1.NBResource{}
+			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, ozresource)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
 
 				By("Cleanup the specific resource instance NBResource")
-				Expect(k8sClient.Delete(ctx, nbresource)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, ozresource)).To(Succeed())
 			}
 		})
 		When("Not enough information to create policy", func() {
 			It("should not create any policy", func() {
 				controllerReconciler := &NBPolicyReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -117,15 +117,15 @@ var _ = Describe("NBPolicy Controller", func() {
 			It("should create 1 policy", func() {
 				controllerReconciler := &NBPolicyReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
-				nbResource := &netbirdiov1.NBResource{
+				nbResource := &openzrov1.NBResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Spec: netbirdiov1.NBResourceSpec{
+					Spec: openzrov1.NBResourceSpec{
 						Name:       "meow",
 						Groups:     []string{"test"},
 						NetworkID:  "test",
@@ -136,15 +136,15 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				nbResource.Status = netbirdiov1.NBResourceStatus{
+				nbResource.Status = openzrov1.NBResourceStatus{
 					TCPPorts:   []int32{443},
 					PolicyName: &resourceName,
 					Groups:     []string{"test"},
 				}
 				Expect(k8sClient.Status().Update(ctx, nbResource)).To(Succeed())
 
-				nbpolicy.Status.ManagedServiceList = append(nbpolicy.Status.ManagedServiceList, "default/test")
-				Expect(k8sClient.Status().Update(ctx, nbpolicy)).To(Succeed())
+				ozpolicy.Status.ManagedServiceList = append(ozpolicy.Status.ManagedServiceList, "default/test")
+				Expect(k8sClient.Status().Update(ctx, ozpolicy)).To(Succeed())
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
 					resp := []api.Group{
@@ -214,12 +214,12 @@ var _ = Describe("NBPolicy Controller", func() {
 			It("should delete tcp policy", func() {
 				controllerReconciler := &NBPolicyReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
-				nbpolicy.Status.ManagedServiceList = append(nbpolicy.Status.ManagedServiceList, "default/noexist")
-				nbpolicy.Status.TCPPolicyID = util.Ptr("policyid")
-				Expect(k8sClient.Status().Update(ctx, nbpolicy)).To(Succeed())
+				ozpolicy.Status.ManagedServiceList = append(ozpolicy.Status.ManagedServiceList, "default/noexist")
+				ozpolicy.Status.TCPPolicyID = util.Ptr("policyid")
+				Expect(k8sClient.Status().Update(ctx, ozpolicy)).To(Succeed())
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
 					resp := []api.Group{
@@ -255,15 +255,15 @@ var _ = Describe("NBPolicy Controller", func() {
 			It("should create 1 policy", func() {
 				controllerReconciler := &NBPolicyReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
-				nbResource := &netbirdiov1.NBResource{
+				nbResource := &openzrov1.NBResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Spec: netbirdiov1.NBResourceSpec{
+					Spec: openzrov1.NBResourceSpec{
 						Name:       "meow",
 						Groups:     []string{"test"},
 						NetworkID:  "test",
@@ -274,15 +274,15 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				nbResource.Status = netbirdiov1.NBResourceStatus{
+				nbResource.Status = openzrov1.NBResourceStatus{
 					UDPPorts:   []int32{443},
 					PolicyName: &resourceName,
 					Groups:     []string{"test"},
 				}
 				Expect(k8sClient.Status().Update(ctx, nbResource)).To(Succeed())
 
-				nbpolicy.Status.ManagedServiceList = append(nbpolicy.Status.ManagedServiceList, "default/test")
-				Expect(k8sClient.Status().Update(ctx, nbpolicy)).To(Succeed())
+				ozpolicy.Status.ManagedServiceList = append(ozpolicy.Status.ManagedServiceList, "default/test")
+				Expect(k8sClient.Status().Update(ctx, ozpolicy)).To(Succeed())
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
 					resp := []api.Group{
@@ -352,12 +352,12 @@ var _ = Describe("NBPolicy Controller", func() {
 			It("should delete udp policy", func() {
 				controllerReconciler := &NBPolicyReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
-				nbpolicy.Status.ManagedServiceList = append(nbpolicy.Status.ManagedServiceList, "default/noexist")
-				nbpolicy.Status.UDPPolicyID = util.Ptr("policyid")
-				Expect(k8sClient.Status().Update(ctx, nbpolicy)).To(Succeed())
+				ozpolicy.Status.ManagedServiceList = append(ozpolicy.Status.ManagedServiceList, "default/noexist")
+				ozpolicy.Status.UDPPolicyID = util.Ptr("policyid")
+				Expect(k8sClient.Status().Update(ctx, ozpolicy)).To(Succeed())
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
 					resp := []api.Group{
@@ -393,15 +393,15 @@ var _ = Describe("NBPolicy Controller", func() {
 			It("Should delete protocol policy", func() {
 				controllerReconciler := &NBPolicyReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
-				nbResource := &netbirdiov1.NBResource{
+				nbResource := &openzrov1.NBResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Spec: netbirdiov1.NBResourceSpec{
+					Spec: openzrov1.NBResourceSpec{
 						Name:       "meow",
 						Groups:     []string{"test"},
 						NetworkID:  "test",
@@ -412,19 +412,19 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				nbResource.Status = netbirdiov1.NBResourceStatus{
+				nbResource.Status = openzrov1.NBResourceStatus{
 					TCPPorts:   []int32{443},
 					PolicyName: &resourceName,
 					Groups:     []string{"test"},
 				}
 				Expect(k8sClient.Status().Update(ctx, nbResource)).To(Succeed())
 
-				nbpolicy.Spec.Protocols = []string{"udp"}
-				Expect(k8sClient.Update(ctx, nbpolicy)).To(Succeed())
+				ozpolicy.Spec.Protocols = []string{"udp"}
+				Expect(k8sClient.Update(ctx, ozpolicy)).To(Succeed())
 
-				nbpolicy.Status.ManagedServiceList = append(nbpolicy.Status.ManagedServiceList, "default/test")
-				nbpolicy.Status.TCPPolicyID = util.Ptr("policyid")
-				Expect(k8sClient.Status().Update(ctx, nbpolicy)).To(Succeed())
+				ozpolicy.Status.ManagedServiceList = append(ozpolicy.Status.ManagedServiceList, "default/test")
+				ozpolicy.Status.TCPPolicyID = util.Ptr("policyid")
+				Expect(k8sClient.Status().Update(ctx, ozpolicy)).To(Succeed())
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
 					resp := []api.Group{
@@ -459,28 +459,28 @@ var _ = Describe("NBPolicy Controller", func() {
 
 		When("Updating existing policy", func() {
 			AfterEach(func() {
-				nbresource := &netbirdiov1.NBResource{}
-				err := k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test-b"}, nbresource)
+				ozresource := &openzrov1.NBResource{}
+				err := k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test-b"}, ozresource)
 				if !errors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
 
 					By("Cleanup the specific resource instance NBResource")
-					Expect(k8sClient.Delete(ctx, nbresource)).To(Succeed())
+					Expect(k8sClient.Delete(ctx, ozresource)).To(Succeed())
 				}
 			})
 
 			It("Should give all information to Update method", func() {
 				controllerReconciler := &NBPolicyReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
-				nbResource := &netbirdiov1.NBResource{
+				nbResource := &openzrov1.NBResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Spec: netbirdiov1.NBResourceSpec{
+					Spec: openzrov1.NBResourceSpec{
 						Name:       "meow",
 						Groups:     []string{"test"},
 						NetworkID:  "test",
@@ -491,19 +491,19 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				nbResource.Status = netbirdiov1.NBResourceStatus{
+				nbResource.Status = openzrov1.NBResourceStatus{
 					TCPPorts:   []int32{443},
 					PolicyName: &resourceName,
 					Groups:     []string{"test"},
 				}
 				Expect(k8sClient.Status().Update(ctx, nbResource)).To(Succeed())
 
-				nbResourceB := &netbirdiov1.NBResource{
+				nbResourceB := &openzrov1.NBResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-b",
 						Namespace: "default",
 					},
-					Spec: netbirdiov1.NBResourceSpec{
+					Spec: openzrov1.NBResourceSpec{
 						Name:       "meow-b",
 						Groups:     []string{"test-b"},
 						NetworkID:  "test",
@@ -514,16 +514,16 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResourceB)).To(Succeed())
 
-				nbResourceB.Status = netbirdiov1.NBResourceStatus{
+				nbResourceB.Status = openzrov1.NBResourceStatus{
 					TCPPorts:   []int32{80},
 					PolicyName: &resourceName,
 					Groups:     []string{"test-b"},
 				}
 				Expect(k8sClient.Status().Update(ctx, nbResourceB)).To(Succeed())
 
-				nbpolicy.Status.ManagedServiceList = append(nbpolicy.Status.ManagedServiceList, "default/test", "default/test-b")
-				nbpolicy.Status.TCPPolicyID = util.Ptr("policyid")
-				Expect(k8sClient.Status().Update(ctx, nbpolicy)).To(Succeed())
+				ozpolicy.Status.ManagedServiceList = append(ozpolicy.Status.ManagedServiceList, "default/test", "default/test-b")
+				ozpolicy.Status.TCPPolicyID = util.Ptr("policyid")
+				Expect(k8sClient.Status().Update(ctx, ozpolicy)).To(Succeed())
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
 					resp := []api.Group{
@@ -589,14 +589,14 @@ var _ = Describe("NBPolicy Controller", func() {
 			It("should delete Policies", func() {
 				controllerReconciler := &NBPolicyReconciler{
 					Client:  k8sClient,
-					Netbird: netbirdClient,
+					openZro: openzroClient,
 				}
 
-				nbpolicy.Status.TCPPolicyID = util.Ptr("policyidtcp")
-				nbpolicy.Status.UDPPolicyID = util.Ptr("policyidudp")
-				Expect(k8sClient.Status().Update(ctx, nbpolicy)).To(Succeed())
+				ozpolicy.Status.TCPPolicyID = util.Ptr("policyidtcp")
+				ozpolicy.Status.UDPPolicyID = util.Ptr("policyidudp")
+				Expect(k8sClient.Status().Update(ctx, ozpolicy)).To(Succeed())
 
-				Expect(k8sClient.Delete(ctx, nbpolicy)).To(Succeed())
+				Expect(k8sClient.Delete(ctx, ozpolicy)).To(Succeed())
 
 				tcpPolicyDeleted := false
 				mux.HandleFunc("/api/policies/policyidtcp", func(w http.ResponseWriter, r *http.Request) {
@@ -623,7 +623,7 @@ var _ = Describe("NBPolicy Controller", func() {
 				Expect(tcpPolicyDeleted).To(BeTrue())
 				Expect(udpPolicyDeleted).To(BeTrue())
 
-				err = k8sClient.Get(ctx, typeNamespacedName, nbpolicy)
+				err = k8sClient.Get(ctx, typeNamespacedName, ozpolicy)
 				Expect(errors.IsNotFound(err)).To(BeTrue())
 			})
 		})

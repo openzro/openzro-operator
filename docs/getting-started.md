@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- A NetBird [service user access token](https://docs.netbird.io/manage/public-api).
+- A openZro [service user access token](https://docs.openzro.io/manage/public-api).
 - Access to Kubernetes cluster.
 - Kubectl and Helm installed locally.
 
@@ -11,7 +11,7 @@
 Add the Helm repository.
 
 ```sh
-helm repo add netbirdio https://netbirdio.github.io/kubernetes-operator
+helm repo add openzro https://openzro.github.io/openzro-operator
 ```
 
 Install cert-manager, it is recommended so the Kubernetes API can communicate with the operator's admission webhooks. Skip this step if you already have cert-manager installed.
@@ -20,23 +20,23 @@ Install cert-manager, it is recommended so the Kubernetes API can communicate wi
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.0/cert-manager.yaml
 ```
 
-Create the NetBird namespace and API secret. The operator needs a NetBird personal access token to authenticate with the NetBird Management API.
+Create the openZro namespace and API secret. The operator needs a openZro personal access token to authenticate with the openZro Management API.
 
 ```sh
-kubectl create namespace netbird
-kubectl -n netbird create secret generic netbird-mgmt-api-key --from-literal=NB_API_KEY=${ACCESS_TOKEN}
+kubectl create namespace openzro
+kubectl -n openzro create secret generic openzro-mgmt-api-key --from-literal=OZ_API_KEY=${ACCESS_TOKEN}
 ```
 
-Install the Netbird operator.
+Install the openZro operator.
 
 ```sh
-helm install netbird-operator netbirdio/kubernetes-operator --create-namespace --namespace netbird
+helm install openzro-operator openzro/openzro-operator --create-namespace --namespace openzro
 ```
 
 Verify the installation. All pods should be in a `Running` state before continuing.
 
 ```sh
-kubectl get pods -n netbird
+kubectl get pods -n openzro
 ```
 
-Once the operator is running, see the [usage guide](/docs/usage.md) to start exposing services to your NetBird network.
+Once the operator is running, see the [usage guide](/docs/usage.md) to start exposing services to your openZro network.

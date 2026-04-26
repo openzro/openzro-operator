@@ -11,8 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	nbv1alpha1 "github.com/netbirdio/kubernetes-operator/api/v1alpha1"
-	"github.com/netbirdio/kubernetes-operator/internal/netbirdmock"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
+	"github.com/openzro/openzro-operator/internal/openzromock"
 )
 
 var _ = Describe("SetupKey Controller", func() {
@@ -28,12 +28,12 @@ var _ = Describe("SetupKey Controller", func() {
 		BeforeEach(func() {
 			controllerReconciler = &SetupKeyReconciler{
 				Client:  k8sClient,
-				Netbird: netbirdmock.Client(),
+				openZro: openzromock.Client(),
 			}
 		})
 
 		AfterEach(func() {
-			setupKey := &nbv1alpha1.SetupKey{}
+			setupKey := &ozv1alpha1.SetupKey{}
 			err := k8sClient.Get(ctx, nn, setupKey)
 			if kerrors.IsNotFound(err) {
 				return
@@ -45,12 +45,12 @@ var _ = Describe("SetupKey Controller", func() {
 		})
 
 		It("creates a secret containing the setup key", func() {
-			setupKey := &nbv1alpha1.SetupKey{
+			setupKey := &ozv1alpha1.SetupKey{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nn.Name,
 					Namespace: nn.Namespace,
 				},
-				Spec: nbv1alpha1.SetupKeySpec{
+				Spec: ozv1alpha1.SetupKeySpec{
 					Name: "test",
 				},
 			}
@@ -72,18 +72,18 @@ var _ = Describe("SetupKey Controller", func() {
 			err = k8sClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
 			Expect(err).NotTo(HaveOccurred())
 
-			resp, err := controllerReconciler.Netbird.SetupKeys.Get(ctx, setupKey.Status.SetupKeyID)
+			resp, err := controllerReconciler.openZro.SetupKeys.Get(ctx, setupKey.Status.SetupKeyID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(secret.Data[SetupKeySecretKey])).To(Equal(resp.Key))
 		})
 
 		It("creates a new setup key when the secret is deleted", func() {
-			setupKey := &nbv1alpha1.SetupKey{
+			setupKey := &ozv1alpha1.SetupKey{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      nn.Name,
 					Namespace: nn.Namespace,
 				},
-				Spec: nbv1alpha1.SetupKeySpec{
+				Spec: ozv1alpha1.SetupKeySpec{
 					Name: "test",
 				},
 			}
@@ -91,7 +91,7 @@ var _ = Describe("SetupKey Controller", func() {
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: nn})
 			Expect(err).NotTo(HaveOccurred())
 
-			firstSetupKey := nbv1alpha1.SetupKey{}
+			firstSetupKey := ozv1alpha1.SetupKey{}
 			err = k8sClient.Get(ctx, nn, &firstSetupKey)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -107,7 +107,7 @@ var _ = Describe("SetupKey Controller", func() {
 
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: nn})
 			Expect(err).NotTo(HaveOccurred())
-			secondSetupKey := nbv1alpha1.SetupKey{}
+			secondSetupKey := ozv1alpha1.SetupKey{}
 			err = k8sClient.Get(ctx, nn, &secondSetupKey)
 			Expect(err).NotTo(HaveOccurred())
 
