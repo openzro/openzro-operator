@@ -10,7 +10,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/onsi/ginkgo/v2 v2.28.1
 	github.com/onsi/gomega v1.39.1
-	github.com/openzro/openzro v0.69.0
+	github.com/openzro/openzro v0.53.1-alpha.1
 	k8s.io/api v0.35.2
 	k8s.io/apimachinery v0.35.2
 	k8s.io/client-go v0.35.2
@@ -107,5 +107,3 @@ tool (
 	github.com/elastic/crd-ref-docs
 	sigs.k8s.io/controller-tools/cmd/controller-gen
 )
-
-replace github.com/openzro/openzro => ../openzro
