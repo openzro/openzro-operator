@@ -1,47 +1,67 @@
 name: release
+
 on:
   push:
     tags:
       - "v*"
-    branches:
-      - main
+  workflow_dispatch:
+
 jobs:
   docker:
+    name: Build + push operator image to ghcr.io
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
       id-token: write
+
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@030e881283bb7a6894de51c315a6bfe6a94e05cf #v6.0.0
+        uses: docker/metadata-action@v6
         with:
+          # ghcr.io/openzro/openzro-operator — published via the
+          # standard GITHUB_TOKEN; the openzro org's package
+          # creation policy + workflow permissions are configured
+          # to allow this. Tag forms emitted on tag push:
+          #   :0.3.2-alpha.1   (semver, no `v` prefix)
+          #   :latest          (always points at the most-recent tag)
           images: |
-            openzro/openzro-operator
+            ghcr.io/openzro/openzro-operator
           tags: |
-            type=ref,event=pr
-            type=ref,event=branch
             type=semver,pattern={{version}}
-      - name: Login to Docker Hub
-        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 #v4.1.0
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKER_USER }}
-          password: ${{ secrets.DOCKER_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@ce360397dd3f832beb865e1373c09c0e9f86d70a #v4.0.0
+        uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd #v4.0.0
-      - name: Build and push
-        uses: docker/build-push-action@bcafcacb16a39f128d818304e6c9c0c18556b85f #v7.1.0
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build + push
+        uses: docker/build-push-action@v6
         with:
+          context: .
+          # Multi-arch: openZro K8s self-hosters are split between
+          # amd64 (cloud) and arm64 (Raspberry Pi / Graviton / Apple
+          # Silicon clusters via colima/lima).
           platforms: linux/amd64,linux/arm64
-          push: true
+          push: ${{ github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
-            "org.opencontainers.image.created={{.Date}}"
-            "org.opencontainers.image.title={{.ProjectName}}"
-            "org.opencontainers.image.version={{.Version}}"
-            "org.opencontainers.image.revision={{.FullCommit}}"
-            "org.opencontainers.image.version={{.Version}}"
-            "maintainer=dev@openzro.io"
+            org.opencontainers.image.title=openzro-operator
+            org.opencontainers.image.version=${{ steps.meta.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=https://github.com/openzro/openzro-operator
+            org.opencontainers.image.licenses=BSD-3-Clause
+            maintainer=dev@openzro.io
