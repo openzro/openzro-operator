@@ -15,11 +15,11 @@ import (
 
 	openzrov1 "github.com/openzro/openzro-operator/api/v1"
 	"github.com/openzro/openzro-operator/internal/util"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 )
 
-var _ = Describe("NBGroup Controller", func() {
+var _ = Describe("OZGroup Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -33,7 +33,7 @@ var _ = Describe("NBGroup Controller", func() {
 		var openzroClient *openzro.Client
 		var mux *http.ServeMux
 		var server *httptest.Server
-		var nbGroup openzrov1.NBGroup
+		var nbGroup openzrov1.OZGroup
 
 		BeforeEach(func() {
 			mux = &http.ServeMux{}
@@ -46,13 +46,13 @@ var _ = Describe("NBGroup Controller", func() {
 				Expect(deleteErr).NotTo(HaveOccurred())
 			}
 			if err == nil || errors.IsNotFound(err) {
-				nbGroup = openzrov1.NBGroup{
+				nbGroup = openzrov1.OZGroup{
 					ObjectMeta: v1.ObjectMeta{
 						Name:       resourceName,
 						Namespace:  typeNamespacedName.Namespace,
 						Finalizers: []string{"openzro.io/group-cleanup"},
 					},
-					Spec: openzrov1.NBGroupSpec{
+					Spec: openzrov1.OZGroupSpec{
 						Name: resourceName,
 					},
 				}
@@ -63,7 +63,7 @@ var _ = Describe("NBGroup Controller", func() {
 
 		AfterEach(func() {
 			server.Close()
-			resource := &openzrov1.NBGroup{}
+			resource := &openzrov1.OZGroup{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			if errors.IsNotFound(err) {
 				return
@@ -75,7 +75,7 @@ var _ = Describe("NBGroup Controller", func() {
 			}
 
 			if resource.DeletionTimestamp == nil {
-				By("Cleanup the specific resource instance NBGroup")
+				By("Cleanup the specific resource instance OZGroup")
 				Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 			}
 		})
@@ -83,9 +83,9 @@ var _ = Describe("NBGroup Controller", func() {
 		When("Group doesn't exist", func() {
 			It("should create group", func() {
 				By("Reconciling the created resource")
-				controllerReconciler := &NBGroupReconciler{
+				controllerReconciler := &OZGroupReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -114,16 +114,16 @@ var _ = Describe("NBGroup Controller", func() {
 				Expect(*nbGroup.Status.GroupID).To(Equal("Test"))
 				Expect(nbGroup.Status.Conditions).To(HaveLen(1))
 				Expect(nbGroup.Status.Conditions[0].Status).To(BeEquivalentTo(v1.ConditionTrue))
-				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.NBSetupKeyReady))
+				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.OZSetupKeyReady))
 			})
 		})
 
 		When("Group already exists", func() {
 			It("should use existing group", func() {
 				By("Reconciling the created resource")
-				controllerReconciler := &NBGroupReconciler{
+				controllerReconciler := &OZGroupReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -149,11 +149,11 @@ var _ = Describe("NBGroup Controller", func() {
 				Expect(*nbGroup.Status.GroupID).To(Equal("Test"))
 				Expect(nbGroup.Status.Conditions).To(HaveLen(1))
 				Expect(nbGroup.Status.Conditions[0].Status).To(BeEquivalentTo(v1.ConditionTrue))
-				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.NBSetupKeyReady))
+				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.OZSetupKeyReady))
 			})
 		})
 
-		When("NBGroup is set for deletion", func() {
+		When("OZGroup is set for deletion", func() {
 			deleteGroup := func() {
 				GinkgoHelper()
 				By("Adding the group ID in status")
@@ -170,9 +170,9 @@ var _ = Describe("NBGroup Controller", func() {
 				It("should delete group", func() {
 					deleteGroup()
 					By("Reconciling the deleting resource")
-					controllerReconciler := &NBGroupReconciler{
+					controllerReconciler := &OZGroupReconciler{
 						Client:  k8sClient,
-						openZro: openzroClient,
+						OpenZro: openzroClient,
 					}
 
 					method := ""
@@ -196,9 +196,9 @@ var _ = Describe("NBGroup Controller", func() {
 				It("should return error", func() {
 					deleteGroup()
 					By("Reconciling the deleting resource")
-					controllerReconciler := &NBGroupReconciler{
+					controllerReconciler := &OZGroupReconciler{
 						Client:  k8sClient,
-						openZro: openzroClient,
+						OpenZro: openzroClient,
 					}
 
 					method := ""
@@ -220,14 +220,14 @@ var _ = Describe("NBGroup Controller", func() {
 			})
 
 			When("Group already exists in another namespace", func() {
-				It("Should delete NBGroup after linked failure", func() {
+				It("Should delete OZGroup after linked failure", func() {
 					deleteGroup()
-					otherGroup := &openzrov1.NBGroup{
+					otherGroup := &openzrov1.OZGroup{
 						ObjectMeta: v1.ObjectMeta{
 							Name:      nbGroup.Name,
 							Namespace: "kube-system",
 						},
-						Spec: openzrov1.NBGroupSpec{
+						Spec: openzrov1.OZGroupSpec{
 							Name: nbGroup.Spec.Name,
 						},
 					}
@@ -237,9 +237,9 @@ var _ = Describe("NBGroup Controller", func() {
 					Expect(k8sClient.Status().Update(ctx, otherGroup)).To(Succeed())
 
 					By("Reconciling the deleting resource")
-					controllerReconciler := &NBGroupReconciler{
+					controllerReconciler := &OZGroupReconciler{
 						Client:  k8sClient,
-						openZro: openzroClient,
+						OpenZro: openzroClient,
 					}
 
 					method := ""
@@ -264,9 +264,9 @@ var _ = Describe("NBGroup Controller", func() {
 
 		When("Group already exists with different ID", func() {
 			It("should re-use existing group ID", func() {
-				controllerReconciler := &NBGroupReconciler{
+				controllerReconciler := &OZGroupReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -295,15 +295,15 @@ var _ = Describe("NBGroup Controller", func() {
 				Expect(*nbGroup.Status.GroupID).To(Equal("Test"))
 				Expect(nbGroup.Status.Conditions).To(HaveLen(1))
 				Expect(nbGroup.Status.Conditions[0].Status).To(BeEquivalentTo(v1.ConditionTrue))
-				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.NBSetupKeyReady))
+				Expect(nbGroup.Status.Conditions[0].Type).To(Equal(openzrov1.OZSetupKeyReady))
 			})
 		})
 
 		When("Group deleted from openZro API", func() {
 			It("Should requeue and create group on next run", func() {
-				controllerReconciler := &NBGroupReconciler{
+				controllerReconciler := &OZGroupReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {

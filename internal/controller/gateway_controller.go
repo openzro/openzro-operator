@@ -108,7 +108,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 			Type:    string(gatewayv1.GatewayConditionProgrammed),
 			Status:  metav1.ConditionFalse,
 			Reason:  string(gatewayv1.GatewayReasonProgrammed),
-			Message: fmt.Sprintf("NBRoutingPeer %s is not ready", routingPeerName),
+			Message: fmt.Sprintf("OZRoutingPeer %s is not ready", routingPeerName),
 		}
 		meta.SetStatusCondition(&gw.Status.Conditions, cond)
 		err = sp.Patch(ctx, gw)

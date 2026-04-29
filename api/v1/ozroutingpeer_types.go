@@ -6,8 +6,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NBRoutingPeerSpec defines the desired state of NBRoutingPeer.
-type NBRoutingPeerSpec struct {
+// OZRoutingPeerSpec defines the desired state of OZRoutingPeer.
+type OZRoutingPeerSpec struct {
 	// +optional
 	Replicas *int32 `json:"replicas"`
 	// +optional
@@ -28,8 +28,8 @@ type NBRoutingPeerSpec struct {
 	Privileged *bool `json:"privileged,omitempty"`
 }
 
-// NBRoutingPeerStatus defines the observed state of NBRoutingPeer.
-type NBRoutingPeerStatus struct {
+// OZRoutingPeerStatus defines the observed state of OZRoutingPeer.
+type OZRoutingPeerStatus struct {
 	// +optional
 	NetworkID *string `json:"networkID"`
 	// +optional
@@ -37,11 +37,11 @@ type NBRoutingPeerStatus struct {
 	// +optional
 	RouterID *string `json:"routerID"`
 	// +optional
-	Conditions []NBCondition `json:"conditions,omitempty"`
+	Conditions []OZCondition `json:"conditions,omitempty"`
 }
 
-// Equal returns if NBRoutingPeerStatus is equal to this one
-func (a NBRoutingPeerStatus) Equal(b NBRoutingPeerStatus) bool {
+// Equal returns if OZRoutingPeerStatus is equal to this one
+func (a OZRoutingPeerStatus) Equal(b OZRoutingPeerStatus) bool {
 	return a.NetworkID == b.NetworkID &&
 		a.SetupKeyID == b.SetupKeyID &&
 		a.RouterID == b.RouterID &&
@@ -51,24 +51,24 @@ func (a NBRoutingPeerStatus) Equal(b NBRoutingPeerStatus) bool {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// NBRoutingPeer is the Schema for the ozroutingpeers API.
-type NBRoutingPeer struct {
+// OZRoutingPeer is the Schema for the ozroutingpeers API.
+type OZRoutingPeer struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NBRoutingPeerSpec   `json:"spec,omitempty"`
-	Status NBRoutingPeerStatus `json:"status,omitempty"`
+	Spec   OZRoutingPeerSpec   `json:"spec,omitempty"`
+	Status OZRoutingPeerStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// NBRoutingPeerList contains a list of NBRoutingPeer.
-type NBRoutingPeerList struct {
+// OZRoutingPeerList contains a list of OZRoutingPeer.
+type OZRoutingPeerList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NBRoutingPeer `json:"items"`
+	Items           []OZRoutingPeer `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&NBRoutingPeer{}, &NBRoutingPeerList{})
+	SchemeBuilder.Register(&OZRoutingPeer{}, &OZRoutingPeerList{})
 }

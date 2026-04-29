@@ -30,7 +30,7 @@ import (
 	openzrov1 "github.com/openzro/openzro-operator/api/v1"
 )
 
-var _ = Describe("NBSetupKey Controller", func() {
+var _ = Describe("OZSetupKey Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -40,18 +40,18 @@ var _ = Describe("NBSetupKey Controller", func() {
 			Name:      resourceName,
 			Namespace: "default",
 		}
-		ozsetupkey := &openzrov1.NBSetupKey{}
+		ozsetupkey := &openzrov1.OZSetupKey{}
 		secret := &v1.Secret{}
 
 		BeforeEach(func() {
-			By("creating the custom resource for the Kind NBSetupKey")
+			By("creating the custom resource for the Kind OZSetupKey")
 			err := k8sClient.Get(ctx, typeNamespacedName, ozsetupkey)
-			resource := &openzrov1.NBSetupKey{
+			resource := &openzrov1.OZSetupKey{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      resourceName,
 					Namespace: "default",
 				},
-				Spec: openzrov1.NBSetupKeySpec{
+				Spec: openzrov1.OZSetupKeySpec{
 					SecretKeyRef: v1.SecretKeySelector{
 						LocalObjectReference: v1.LocalObjectReference{
 							Name: resourceName,
@@ -67,17 +67,17 @@ var _ = Describe("NBSetupKey Controller", func() {
 		})
 
 		AfterEach(func() {
-			resource := &openzrov1.NBSetupKey{}
+			resource := &openzrov1.OZSetupKey{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
-			By("Cleanup the specific resource instance NBSetupKey")
+			By("Cleanup the specific resource instance OZSetupKey")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 		})
 
 		When("No secret present", func() {
 			It("should set status to not ready", func() {
-				controllerReconciler := &NBSetupKeyReconciler{
+				controllerReconciler := &OZSetupKeyReconciler{
 					Client:            k8sClient,
 					ReferencedSecrets: make(map[string]types.NamespacedName),
 				}
@@ -122,7 +122,7 @@ var _ = Describe("NBSetupKey Controller", func() {
 				It("should set status to not ready", func() {
 					createSecret("setupkey", "invalid-key")
 
-					controllerReconciler := &NBSetupKeyReconciler{
+					controllerReconciler := &OZSetupKeyReconciler{
 						Client:            k8sClient,
 						ReferencedSecrets: make(map[string]types.NamespacedName),
 					}
@@ -147,7 +147,7 @@ var _ = Describe("NBSetupKey Controller", func() {
 				It("should set status to not ready", func() {
 					createSecret("key", "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE")
 
-					controllerReconciler := &NBSetupKeyReconciler{
+					controllerReconciler := &OZSetupKeyReconciler{
 						Client:            k8sClient,
 						ReferencedSecrets: make(map[string]types.NamespacedName),
 					}
@@ -172,7 +172,7 @@ var _ = Describe("NBSetupKey Controller", func() {
 				It("should set status to ready", func() {
 					createSecret("setupkey", "EEEEEEEE-EEEE-EEEE-EEEE-EEEEEEEEEEEE")
 
-					controllerReconciler := &NBSetupKeyReconciler{
+					controllerReconciler := &OZSetupKeyReconciler{
 						Client:            k8sClient,
 						ReferencedSecrets: make(map[string]types.NamespacedName),
 					}

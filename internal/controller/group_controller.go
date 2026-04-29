@@ -5,8 +5,8 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -18,7 +18,7 @@ import (
 type GroupReconciler struct {
 	client.Client
 
-	openZro *openzro.Client
+	OpenZro *openzro.Client
 }
 
 // +kubebuilder:rbac:groups=openzro.io,resources=groups,verbs=get;list;watch;create;update;patch;delete
@@ -47,7 +47,7 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 			Name: group.Spec.Name,
 		}
 		if group.Status.GroupID != "" {
-			resp, err := r.openZro.Groups.Update(ctx, group.Status.GroupID, groupReq)
+			resp, err := r.OpenZro.Groups.Update(ctx, group.Status.GroupID, groupReq)
 			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
@@ -55,7 +55,7 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 				return resp.Id, nil
 			}
 		}
-		resp, err := r.openZro.Groups.Create(ctx, groupReq)
+		resp, err := r.OpenZro.Groups.Create(ctx, groupReq)
 		if err != nil {
 			return "", err
 		}
@@ -76,7 +76,7 @@ func (r *GroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl
 
 func (r *GroupReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, group *ozv1alpha1.Group) (ctrl.Result, error) {
 	if group.Status.GroupID != "" {
-		err := r.openZro.Groups.Delete(ctx, group.Status.GroupID)
+		err := r.OpenZro.Groups.Delete(ctx, group.Status.GroupID)
 		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}

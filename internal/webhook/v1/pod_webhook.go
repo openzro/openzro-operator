@@ -194,22 +194,22 @@ func (d *PodopenZroInjector) Default(ctx context.Context, pod *corev1.Pod) error
 func (d *PodopenZroInjector) legacyInjector(ctx context.Context, pod *corev1.Pod) error {
 	podlog.Info("Defaulting for Pod", "name", pod.GetName())
 
-	// retrieve the NBSetupKey resource
-	var nbSetupKey openzrov1.NBSetupKey
+	// retrieve the OZSetupKey resource
+	var nbSetupKey openzrov1.OZSetupKey
 	err := d.client.Get(ctx, types.NamespacedName{Namespace: pod.Namespace, Name: pod.Annotations[setupKeyAnnotation]}, &nbSetupKey)
 	if err != nil {
 		return err
 	}
 
-	// ensure the NBSetupKey is ready.
+	// ensure the OZSetupKey is ready.
 	ready := false
 	for _, c := range nbSetupKey.Status.Conditions {
-		if c.Type == openzrov1.NBSetupKeyReady {
+		if c.Type == openzrov1.OZSetupKeyReady {
 			ready = c.Status == corev1.ConditionTrue
 		}
 	}
 	if !ready {
-		return fmt.Errorf("NBSetupKey is not ready")
+		return fmt.Errorf("OZSetupKey is not ready")
 	}
 
 	managementURL := d.managementURL

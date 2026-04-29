@@ -21,17 +21,17 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NBConditionType is a valid value for PodCondition.Type
-type NBConditionType string
+// OZConditionType is a valid value for PodCondition.Type
+type OZConditionType string
 
 // These are built-in conditions of pod. An application may use a custom condition not listed here.
 const (
-	// NBSetupKeyReady indicates whether NBSetupKey is valid and ready to use.
-	NBSetupKeyReady NBConditionType = "Ready"
+	// OZSetupKeyReady indicates whether OZSetupKey is valid and ready to use.
+	OZSetupKeyReady OZConditionType = "Ready"
 )
 
-// NBSetupKeySpec defines the desired state of NBSetupKey.
-type NBSetupKeySpec struct {
+// OZSetupKeySpec defines the desired state of OZSetupKey.
+type OZSetupKeySpec struct {
 	// SecretKeyRef is a reference to the secret containing the setup key
 	// +kubebuilder:validation:XValidation:rule="self.name.size() > 0",reason="FieldValueRequired",message="secret name needs to be set",fieldPath=".name"
 	SecretKeyRef corev1.SecretKeySelector `json:"secretKeyRef"`
@@ -45,16 +45,16 @@ type NBSetupKeySpec struct {
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts,omitempty"`
 }
 
-// NBSetupKeyStatus defines the observed state of NBSetupKey.
-type NBSetupKeyStatus struct {
+// OZSetupKeyStatus defines the observed state of OZSetupKey.
+type OZSetupKeyStatus struct {
 	// +optional
-	Conditions []NBCondition `json:"conditions,omitempty"`
+	Conditions []OZCondition `json:"conditions,omitempty"`
 }
 
-// NBCondition defines a condition in NBSetupKey status.
-type NBCondition struct {
+// OZCondition defines a condition in OZSetupKey status.
+type OZCondition struct {
 	// Type is the type of the condition.
-	Type NBConditionType `json:"type"`
+	Type OZConditionType `json:"type"`
 	// Status is the status of the condition.
 	// Can be True, False, Unknown.
 	Status corev1.ConditionStatus `json:"status"`
@@ -72,11 +72,11 @@ type NBCondition struct {
 	Message string `json:"message,omitempty"`
 }
 
-// NBConditionTrue returns default true condition
-func NBConditionTrue() []NBCondition {
-	return []NBCondition{
+// OZConditionTrue returns default true condition
+func OZConditionTrue() []OZCondition {
+	return []OZCondition{
 		{
-			Type:               NBSetupKeyReady,
+			Type:               OZSetupKeyReady,
 			LastProbeTime:      metav1.Now(),
 			LastTransitionTime: metav1.Now(),
 			Status:             corev1.ConditionTrue,
@@ -84,11 +84,11 @@ func NBConditionTrue() []NBCondition {
 	}
 }
 
-// NBConditionFalse returns default false condition
-func NBConditionFalse(reason, msg string) []NBCondition {
-	return []NBCondition{
+// OZConditionFalse returns default false condition
+func OZConditionFalse(reason, msg string) []OZCondition {
+	return []OZCondition{
 		{
-			Type:               NBSetupKeyReady,
+			Type:               OZSetupKeyReady,
 			LastProbeTime:      metav1.Now(),
 			LastTransitionTime: metav1.Now(),
 			Status:             corev1.ConditionFalse,
@@ -101,24 +101,24 @@ func NBConditionFalse(reason, msg string) []NBCondition {
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// NBSetupKey is the Schema for the ozsetupkeys API.
-type NBSetupKey struct {
+// OZSetupKey is the Schema for the ozsetupkeys API.
+type OZSetupKey struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NBSetupKeySpec   `json:"spec,omitempty"`
-	Status NBSetupKeyStatus `json:"status,omitempty"`
+	Spec   OZSetupKeySpec   `json:"spec,omitempty"`
+	Status OZSetupKeyStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// NBSetupKeyList contains a list of NBSetupKey.
-type NBSetupKeyList struct {
+// OZSetupKeyList contains a list of OZSetupKey.
+type OZSetupKeyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NBSetupKey `json:"items"`
+	Items           []OZSetupKey `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&NBSetupKey{}, &NBSetupKeyList{})
+	SchemeBuilder.Register(&OZSetupKey{}, &OZSetupKeyList{})
 }

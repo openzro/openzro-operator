@@ -8,8 +8,8 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,7 +31,7 @@ import (
 type NetworkResourceReconciler struct {
 	client.Client
 
-	openZro *openzro.Client
+	OpenZro *openzro.Client
 }
 
 // +kubebuilder:rbac:groups=openzro.io,resources=networkresources,verbs=get;list;watch;create;update;patch;delete
@@ -113,7 +113,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		return ctrl.Result{}, nil
 	}
 
-	groupIDs, err := openzroutil.GetGroupIDs(ctx, r.Client, r.openZro, netResource.Spec.Groups, netResource.Namespace)
+	groupIDs, err := openzroutil.GetGroupIDs(ctx, r.Client, r.OpenZro, netResource.Spec.Groups, netResource.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -129,7 +129,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			Groups:      groupIDs,
 		}
 		if netResource.Status.ResourceID != "" {
-			netResp, err := r.openZro.Networks.Resources(netRouter.Status.NetworkID).Update(ctx, netResource.Status.ResourceID, netReq)
+			netResp, err := r.OpenZro.Networks.Resources(netRouter.Status.NetworkID).Update(ctx, netResource.Status.ResourceID, netReq)
 			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
@@ -137,7 +137,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				return netResp.Id, nil
 			}
 		}
-		netResp, err := r.openZro.Networks.Resources(netRouter.Status.NetworkID).Create(ctx, netReq)
+		netResp, err := r.OpenZro.Networks.Resources(netRouter.Status.NetworkID).Create(ctx, netReq)
 		if err != nil {
 			return "", err
 		}
@@ -154,14 +154,14 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	// Create DNS records for resource.
-	zone, err := openzroutil.GetDNSZoneByName(ctx, r.openZro, netRouter.Spec.DNSZoneRef.Name)
+	zone, err := openzroutil.GetDNSZoneByName(ctx, r.OpenZro, netRouter.Spec.DNSZoneRef.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// If zone has changed we need to delete the old records.
 	if netResource.Status.DNSZoneID != "" && netResource.Status.DNSZoneID != zone.Id {
-		err = r.openZro.DNSZones.DeleteRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID)
+		err = r.OpenZro.DNSZones.DeleteRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID)
 		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
@@ -177,7 +177,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			Type:    api.DNSRecordTypeA,
 		}
 		if netResource.Status.DNSZoneID != "" && netResource.Status.DNSRecordID != "" {
-			recordResp, err := r.openZro.DNSZones.UpdateRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID, dnsReq)
+			recordResp, err := r.OpenZro.DNSZones.UpdateRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID, dnsReq)
 			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
@@ -185,7 +185,7 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 				return recordResp.Id, nil
 			}
 		}
-		recordResp, err := r.openZro.DNSZones.CreateRecord(ctx, zone.Id, dnsReq)
+		recordResp, err := r.OpenZro.DNSZones.CreateRecord(ctx, zone.Id, dnsReq)
 		if err != nil {
 			return "", err
 		}
@@ -207,13 +207,13 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 func (r *NetworkResourceReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, netResource *ozv1alpha1.NetworkResource) (ctrl.Result, error) {
 	if netResource.Status.NetworkID != "" && netResource.Status.ResourceID != "" {
-		err := r.openZro.Networks.Resources(netResource.Status.NetworkID).Delete(ctx, netResource.Status.ResourceID)
+		err := r.OpenZro.Networks.Resources(netResource.Status.NetworkID).Delete(ctx, netResource.Status.ResourceID)
 		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
 	if netResource.Status.DNSZoneID != "" && netResource.Status.DNSRecordID != "" {
-		err := r.openZro.DNSZones.DeleteRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID)
+		err := r.OpenZro.DNSZones.DeleteRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID)
 		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}

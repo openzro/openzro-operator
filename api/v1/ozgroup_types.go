@@ -5,47 +5,47 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NBGroupSpec defines the desired state of NBGroup.
-type NBGroupSpec struct {
+// OZGroupSpec defines the desired state of OZGroup.
+type OZGroupSpec struct {
 	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="Value is immutable"
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 }
 
-// NBGroupStatus defines the observed state of NBGroup.
-type NBGroupStatus struct {
+// OZGroupStatus defines the observed state of OZGroup.
+type OZGroupStatus struct {
 	// +optional
 	GroupID *string `json:"groupID"`
 	// +optional
-	Conditions []NBCondition `json:"conditions,omitempty"`
+	Conditions []OZCondition `json:"conditions,omitempty"`
 }
 
-// Equal returns if NBGroupStatus is equal to this one
-func (a NBGroupStatus) Equal(b NBGroupStatus) bool {
+// Equal returns if OZGroupStatus is equal to this one
+func (a OZGroupStatus) Equal(b OZGroupStatus) bool {
 	return (a.GroupID == b.GroupID || (a.GroupID != nil && b.GroupID != nil && *a.GroupID == *b.GroupID)) && util.Equivalent(a.Conditions, b.Conditions)
 }
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 
-// NBGroup is the Schema for the ozgroups API.
-type NBGroup struct {
+// OZGroup is the Schema for the ozgroups API.
+type OZGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NBGroupSpec   `json:"spec,omitempty"`
-	Status NBGroupStatus `json:"status,omitempty"`
+	Spec   OZGroupSpec   `json:"spec,omitempty"`
+	Status OZGroupStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// NBGroupList contains a list of NBGroup.
-type NBGroupList struct {
+// OZGroupList contains a list of OZGroup.
+type OZGroupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NBGroup `json:"items"`
+	Items           []OZGroup `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&NBGroup{}, &NBGroupList{})
+	SchemeBuilder.Register(&OZGroup{}, &OZGroupList{})
 }

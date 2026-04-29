@@ -1,5 +1,5 @@
 clusterSecretsPermissions:
-  # Required for NBSetupKey validation
+  # Required for OZSetupKey validation
   # Required for Ingress functionality to create and validate secrets for routing peers
   allowAllSecrets: true
 

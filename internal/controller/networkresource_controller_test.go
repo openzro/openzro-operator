@@ -14,7 +14,7 @@ import (
 
 	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
 	"github.com/openzro/openzro-operator/internal/openzromock"
-	"github.com/openzro/openzro/shared/management/http/api"
+	"github.com/openzro/openzro/management/server/http/api"
 )
 
 var _ = Describe("NetworkResource Controller", func() {
@@ -35,21 +35,21 @@ var _ = Describe("NetworkResource Controller", func() {
 			nbClient := openzromock.Client()
 			netResourceRec = &NetworkResourceReconciler{
 				Client:  k8sClient,
-				openZro: nbClient,
+				OpenZro: nbClient,
 			}
 			netRouterRec = &NetworkRouterReconciler{
 				Client:        k8sClient,
-				openZro:       nbClient,
+				OpenZro:       nbClient,
 				ClientImage:   "docker.io/openzro/openzro:latest",
 				ManagementURL: "https://openzro.io",
 			}
 			setupKeyRec = &SetupKeyReconciler{
 				Client:  k8sClient,
-				openZro: nbClient,
+				OpenZro: nbClient,
 			}
 			groupRec = &GroupReconciler{
 				Client:  k8sClient,
-				openZro: nbClient,
+				OpenZro: nbClient,
 			}
 
 			ns := &corev1.Namespace{
@@ -79,7 +79,7 @@ var _ = Describe("NetworkResource Controller", func() {
 				Name:   "cluster.local",
 				Domain: "cluster.local",
 			}
-			_, err := netRouterRec.openZro.DNSZones.CreateZone(ctx, zoneReq)
+			_, err := netRouterRec.OpenZro.DNSZones.CreateZone(ctx, zoneReq)
 			Expect(err).ToNot(HaveOccurred())
 
 			// Create network router that we reference.

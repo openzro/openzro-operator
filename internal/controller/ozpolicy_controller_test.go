@@ -18,12 +18,12 @@ import (
 
 	openzrov1 "github.com/openzro/openzro-operator/api/v1"
 	"github.com/openzro/openzro-operator/internal/util"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 	ctrl "sigs.k8s.io/controller-runtime"
 )
 
-var _ = Describe("NBPolicy Controller", func() {
+var _ = Describe("OZPolicy Controller", func() {
 	Context("When reconciling a resource", func() {
 		var resourceName = "test-resource"
 
@@ -32,7 +32,7 @@ var _ = Describe("NBPolicy Controller", func() {
 		typeNamespacedName := types.NamespacedName{
 			Name: resourceName,
 		}
-		ozpolicy := &openzrov1.NBPolicy{}
+		ozpolicy := &openzrov1.OZPolicy{}
 		var openzroClient *openzro.Client
 		var mux *http.ServeMux
 		var server *httptest.Server
@@ -43,15 +43,15 @@ var _ = Describe("NBPolicy Controller", func() {
 			server = httptest.NewServer(mux)
 			openzroClient = openzro.New(server.URL, "ABC")
 
-			By("creating the custom resource for the Kind NBPolicy")
+			By("creating the custom resource for the Kind OZPolicy")
 			err := k8sClient.Get(ctx, typeNamespacedName, ozpolicy)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &openzrov1.NBPolicy{
+				resource := &openzrov1.OZPolicy{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       resourceName,
 						Finalizers: []string{"openzro.io/cleanup"},
 					},
-					Spec: openzrov1.NBPolicySpec{
+					Spec: openzrov1.OZPolicySpec{
 						Name:          "Test",
 						SourceGroups:  []string{"All"},
 						Bidirectional: true,
@@ -63,7 +63,7 @@ var _ = Describe("NBPolicy Controller", func() {
 		})
 
 		AfterEach(func() {
-			resource := &openzrov1.NBPolicy{}
+			resource := &openzrov1.OZPolicy{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
@@ -73,24 +73,24 @@ var _ = Describe("NBPolicy Controller", func() {
 					Expect(k8sClient.Update(ctx, resource)).To(Succeed())
 				}
 
-				By("Cleanup the specific resource instance NBPolicy")
+				By("Cleanup the specific resource instance OZPolicy")
 				Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
 			}
 
-			ozresource := &openzrov1.NBResource{}
+			ozresource := &openzrov1.OZResource{}
 			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test"}, ozresource)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
 
-				By("Cleanup the specific resource instance NBResource")
+				By("Cleanup the specific resource instance OZResource")
 				Expect(k8sClient.Delete(ctx, ozresource)).To(Succeed())
 			}
 		})
 		When("Not enough information to create policy", func() {
 			It("should not create any policy", func() {
-				controllerReconciler := &NBPolicyReconciler{
+				controllerReconciler := &OZPolicyReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
 				mux.HandleFunc("/api/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -115,17 +115,17 @@ var _ = Describe("NBPolicy Controller", func() {
 
 		When("Enough information to create TCP policy", func() {
 			It("should create 1 policy", func() {
-				controllerReconciler := &NBPolicyReconciler{
+				controllerReconciler := &OZPolicyReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
-				nbResource := &openzrov1.NBResource{
+				nbResource := &openzrov1.OZResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Spec: openzrov1.NBResourceSpec{
+					Spec: openzrov1.OZResourceSpec{
 						Name:       "meow",
 						Groups:     []string{"test"},
 						NetworkID:  "test",
@@ -136,7 +136,7 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				nbResource.Status = openzrov1.NBResourceStatus{
+				nbResource.Status = openzrov1.OZResourceStatus{
 					TCPPorts:   []int32{443},
 					PolicyName: &resourceName,
 					Groups:     []string{"test"},
@@ -212,9 +212,9 @@ var _ = Describe("NBPolicy Controller", func() {
 
 		When("TCP information no longer sufficient", func() {
 			It("should delete tcp policy", func() {
-				controllerReconciler := &NBPolicyReconciler{
+				controllerReconciler := &OZPolicyReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
 				ozpolicy.Status.ManagedServiceList = append(ozpolicy.Status.ManagedServiceList, "default/noexist")
@@ -253,17 +253,17 @@ var _ = Describe("NBPolicy Controller", func() {
 
 		When("Enough information to create UDP policy", func() {
 			It("should create 1 policy", func() {
-				controllerReconciler := &NBPolicyReconciler{
+				controllerReconciler := &OZPolicyReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
-				nbResource := &openzrov1.NBResource{
+				nbResource := &openzrov1.OZResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Spec: openzrov1.NBResourceSpec{
+					Spec: openzrov1.OZResourceSpec{
 						Name:       "meow",
 						Groups:     []string{"test"},
 						NetworkID:  "test",
@@ -274,7 +274,7 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				nbResource.Status = openzrov1.NBResourceStatus{
+				nbResource.Status = openzrov1.OZResourceStatus{
 					UDPPorts:   []int32{443},
 					PolicyName: &resourceName,
 					Groups:     []string{"test"},
@@ -350,9 +350,9 @@ var _ = Describe("NBPolicy Controller", func() {
 
 		When("UDP information no longer sufficient", func() {
 			It("should delete udp policy", func() {
-				controllerReconciler := &NBPolicyReconciler{
+				controllerReconciler := &OZPolicyReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
 				ozpolicy.Status.ManagedServiceList = append(ozpolicy.Status.ManagedServiceList, "default/noexist")
@@ -391,17 +391,17 @@ var _ = Describe("NBPolicy Controller", func() {
 
 		When("Existing protocol gets restricted", func() {
 			It("Should delete protocol policy", func() {
-				controllerReconciler := &NBPolicyReconciler{
+				controllerReconciler := &OZPolicyReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
-				nbResource := &openzrov1.NBResource{
+				nbResource := &openzrov1.OZResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Spec: openzrov1.NBResourceSpec{
+					Spec: openzrov1.OZResourceSpec{
 						Name:       "meow",
 						Groups:     []string{"test"},
 						NetworkID:  "test",
@@ -412,7 +412,7 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				nbResource.Status = openzrov1.NBResourceStatus{
+				nbResource.Status = openzrov1.OZResourceStatus{
 					TCPPorts:   []int32{443},
 					PolicyName: &resourceName,
 					Groups:     []string{"test"},
@@ -459,28 +459,28 @@ var _ = Describe("NBPolicy Controller", func() {
 
 		When("Updating existing policy", func() {
 			AfterEach(func() {
-				ozresource := &openzrov1.NBResource{}
+				ozresource := &openzrov1.OZResource{}
 				err := k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "test-b"}, ozresource)
 				if !errors.IsNotFound(err) {
 					Expect(err).NotTo(HaveOccurred())
 
-					By("Cleanup the specific resource instance NBResource")
+					By("Cleanup the specific resource instance OZResource")
 					Expect(k8sClient.Delete(ctx, ozresource)).To(Succeed())
 				}
 			})
 
 			It("Should give all information to Update method", func() {
-				controllerReconciler := &NBPolicyReconciler{
+				controllerReconciler := &OZPolicyReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
-				nbResource := &openzrov1.NBResource{
+				nbResource := &openzrov1.OZResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "default",
 					},
-					Spec: openzrov1.NBResourceSpec{
+					Spec: openzrov1.OZResourceSpec{
 						Name:       "meow",
 						Groups:     []string{"test"},
 						NetworkID:  "test",
@@ -491,19 +491,19 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResource)).To(Succeed())
 
-				nbResource.Status = openzrov1.NBResourceStatus{
+				nbResource.Status = openzrov1.OZResourceStatus{
 					TCPPorts:   []int32{443},
 					PolicyName: &resourceName,
 					Groups:     []string{"test"},
 				}
 				Expect(k8sClient.Status().Update(ctx, nbResource)).To(Succeed())
 
-				nbResourceB := &openzrov1.NBResource{
+				nbResourceB := &openzrov1.OZResource{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test-b",
 						Namespace: "default",
 					},
-					Spec: openzrov1.NBResourceSpec{
+					Spec: openzrov1.OZResourceSpec{
 						Name:       "meow-b",
 						Groups:     []string{"test-b"},
 						NetworkID:  "test",
@@ -514,7 +514,7 @@ var _ = Describe("NBPolicy Controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, nbResourceB)).To(Succeed())
 
-				nbResourceB.Status = openzrov1.NBResourceStatus{
+				nbResourceB.Status = openzrov1.OZResourceStatus{
 					TCPPorts:   []int32{80},
 					PolicyName: &resourceName,
 					Groups:     []string{"test-b"},
@@ -585,11 +585,11 @@ var _ = Describe("NBPolicy Controller", func() {
 			})
 		})
 
-		When("NBPolicy is set for deletion", func() {
+		When("OZPolicy is set for deletion", func() {
 			It("should delete Policies", func() {
-				controllerReconciler := &NBPolicyReconciler{
+				controllerReconciler := &OZPolicyReconciler{
 					Client:  k8sClient,
-					openZro: openzroClient,
+					OpenZro: openzroClient,
 				}
 
 				ozpolicy.Status.TCPPolicyID = util.Ptr("policyidtcp")

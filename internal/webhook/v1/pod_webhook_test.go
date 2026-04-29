@@ -19,10 +19,10 @@ package v1
 import (
 	"context"
 
-	openzrov1 "github.com/openzro/openzro-operator/api/v1"
-	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -73,21 +73,21 @@ var _ = Describe("Pod Webhook", func() {
 			obj.Annotations[setupKeyAnnotation] = "test"
 		})
 
-		When("NBSetupKey doesn't exist", func() {
+		When("OZSetupKey doesn't exist", func() {
 			It("Should fail", func() {
 				Expect(defaulter.Default(context.Background(), obj)).To(HaveOccurred())
 				Expect(obj.Spec.Containers).To(HaveLen(1))
 			})
 		})
 
-		When("NBSetupKey exists", Ordered, func() {
+		When("OZSetupKey exists", Ordered, func() {
 			BeforeAll(func() {
-				sk := openzrov1.NBSetupKey{
+				sk := openzrov1.OZSetupKey{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "test",
 						Namespace: "test",
 					},
-					Spec: openzrov1.NBSetupKeySpec{
+					Spec: openzrov1.OZSetupKeySpec{
 						SecretKeyRef: corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "test",
@@ -107,10 +107,10 @@ var _ = Describe("Pod Webhook", func() {
 				err = k8sClient.Create(context.Background(), &sk)
 				Expect(err).NotTo(HaveOccurred())
 
-				sk.Status = openzrov1.NBSetupKeyStatus{
-					Conditions: []openzrov1.NBCondition{
+				sk.Status = openzrov1.OZSetupKeyStatus{
+					Conditions: []openzrov1.OZCondition{
 						{
-							Type:   openzrov1.NBSetupKeyReady,
+							Type:   openzrov1.OZSetupKeyReady,
 							Status: corev1.ConditionTrue,
 						},
 					},

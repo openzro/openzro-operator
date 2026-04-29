@@ -5,8 +5,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NBPolicySpec defines the desired state of NBPolicy.
-type NBPolicySpec struct {
+// OZPolicySpec defines the desired state of OZPolicy.
+type OZPolicySpec struct {
 	// Name Policy name
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
@@ -30,8 +30,8 @@ type NBPolicySpec struct {
 	Bidirectional bool `json:"bidirectional"`
 }
 
-// NBPolicyStatus defines the observed state of NBPolicy.
-type NBPolicyStatus struct {
+// OZPolicyStatus defines the observed state of OZPolicy.
+type OZPolicyStatus struct {
 	// +optional
 	TCPPolicyID *string `json:"tcpPolicyID"`
 	// +optional
@@ -41,11 +41,11 @@ type NBPolicyStatus struct {
 	// +optional
 	ManagedServiceList []string `json:"managedServiceList"`
 	// +optional
-	Conditions []NBCondition `json:"conditions,omitempty"`
+	Conditions []OZCondition `json:"conditions,omitempty"`
 }
 
-// Equal returns if NBPolicyStatus is equal to this one
-func (a NBPolicyStatus) Equal(b NBPolicyStatus) bool {
+// Equal returns if OZPolicyStatus is equal to this one
+func (a OZPolicyStatus) Equal(b OZPolicyStatus) bool {
 	return a.TCPPolicyID == b.TCPPolicyID &&
 		a.UDPPolicyID == b.UDPPolicyID &&
 		a.LastUpdatedAt == b.LastUpdatedAt &&
@@ -57,24 +57,24 @@ func (a NBPolicyStatus) Equal(b NBPolicyStatus) bool {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
 
-// NBPolicy is the Schema for the ozpolicies API.
-type NBPolicy struct {
+// OZPolicy is the Schema for the ozpolicies API.
+type OZPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   NBPolicySpec   `json:"spec,omitempty"`
-	Status NBPolicyStatus `json:"status,omitempty"`
+	Spec   OZPolicySpec   `json:"spec,omitempty"`
+	Status OZPolicyStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// NBPolicyList contains a list of NBPolicy.
-type NBPolicyList struct {
+// OZPolicyList contains a list of OZPolicy.
+type OZPolicyList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []NBPolicy `json:"items"`
+	Items           []OZPolicy `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&NBPolicy{}, &NBPolicyList{})
+	SchemeBuilder.Register(&OZPolicy{}, &OZPolicyList{})
 }

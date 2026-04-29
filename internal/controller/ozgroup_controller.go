@@ -7,8 +7,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 	"k8s.io/apimachinery/pkg/api/errors"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -17,11 +17,11 @@ import (
 	"github.com/openzro/openzro-operator/internal/util"
 )
 
-// NBGroupReconciler reconciles a NBGroup object
-type NBGroupReconciler struct {
+// OZGroupReconciler reconciles a OZGroup object
+type OZGroupReconciler struct {
 	client.Client
 
-	openZro *openzro.Client
+	OpenZro *openzro.Client
 }
 
 const (
@@ -35,15 +35,15 @@ const (
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *NBGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	logger := ctrl.Log.WithName("NBGroup").WithValues("namespace", req.Namespace, "name", req.Name)
-	logger.Info("Reconciling NBGroup")
+func (r *OZGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
+	logger := ctrl.Log.WithName("OZGroup").WithValues("namespace", req.Namespace, "name", req.Name)
+	logger.Info("Reconciling OZGroup")
 
-	nbGroup := openzrov1.NBGroup{}
+	nbGroup := openzrov1.OZGroup{}
 	err = r.Client.Get(ctx, req.NamespacedName, &nbGroup)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			logger.Error(errKubernetesAPI, "error getting NBGroup", "err", err)
+			logger.Error(errKubernetesAPI, "error getting OZGroup", "err", err)
 		}
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
@@ -78,9 +78,9 @@ func (r *NBGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 }
 
 // syncopenZroGroup reconciliation logic for non-deleted objects.
-func (r *NBGroupReconciler) syncopenZroGroup(ctx context.Context, nbGroup *openzrov1.NBGroup, logger logr.Logger) (ctrl.Result, error) {
+func (r *OZGroupReconciler) syncopenZroGroup(ctx context.Context, nbGroup *openzrov1.OZGroup, logger logr.Logger) (ctrl.Result, error) {
 	// Get all openZro groups to ensure no group duplication
-	groups, err := r.openZro.Groups.List(ctx)
+	groups, err := r.OpenZro.Groups.List(ctx)
 	if err != nil {
 		logger.Error(erropenZroAPI, "error listing groups", "err", err)
 		return ctrl.Result{}, err
@@ -94,55 +94,55 @@ func (r *NBGroupReconciler) syncopenZroGroup(ctx context.Context, nbGroup *openz
 
 	// Create group if not exists, and update status.groupId
 	if nbGroup.Status.GroupID == nil && group == nil {
-		logger.Info("NBGroup: Creating group on openZro", "name", nbGroup.Spec.Name)
-		group, err := r.openZro.Groups.Create(ctx, api.GroupRequest{
+		logger.Info("OZGroup: Creating group on openZro", "name", nbGroup.Spec.Name)
+		group, err := r.OpenZro.Groups.Create(ctx, api.GroupRequest{
 			Name: nbGroup.Spec.Name,
 		})
 		if err != nil {
-			nbGroup.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("openZro API Error: %v", err))
+			nbGroup.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("openZro API Error: %v", err))
 			logger.Error(erropenZroAPI, "error creating group", "err", err)
 			return ctrl.Result{}, err
 		}
 
-		logger.Info("NBGroup: Created group on openZro", "name", nbGroup.Spec.Name, "id", group.Id)
+		logger.Info("OZGroup: Created group on openZro", "name", nbGroup.Spec.Name, "id", group.Id)
 		nbGroup.Status.GroupID = &group.Id
-		nbGroup.Status.Conditions = openzrov1.NBConditionTrue()
+		nbGroup.Status.Conditions = openzrov1.OZConditionTrue()
 	} else if nbGroup.Status.GroupID == nil && group != nil {
-		logger.Info("NBGroup: Found group with same name on openZro", "name", nbGroup.Spec.Name, "id", group.Id)
+		logger.Info("OZGroup: Found group with same name on openZro", "name", nbGroup.Spec.Name, "id", group.Id)
 		nbGroup.Status.GroupID = &group.Id
-		nbGroup.Status.Conditions = openzrov1.NBConditionTrue()
+		nbGroup.Status.Conditions = openzrov1.OZConditionTrue()
 	} else if group == nil {
-		logger.Info("NBGroup: Group was deleted", "name", nbGroup.Spec.Name, "id", *nbGroup.Status.GroupID)
+		logger.Info("OZGroup: Group was deleted", "name", nbGroup.Spec.Name, "id", *nbGroup.Status.GroupID)
 		nbGroup.Status.GroupID = nil
-		nbGroup.Status.Conditions = openzrov1.NBConditionFalse("GroupGone", "Group was deleted from openZro API")
+		nbGroup.Status.Conditions = openzrov1.OZConditionFalse("GroupGone", "Group was deleted from openZro API")
 		return ctrl.Result{Requeue: true}, nil
 	} else {
-		nbGroup.Status.Conditions = openzrov1.NBConditionTrue()
+		nbGroup.Status.Conditions = openzrov1.OZConditionTrue()
 	}
 
 	if nbGroup.Status.GroupID != nil && group != nil && *nbGroup.Status.GroupID != group.Id {
 		// There are two possibilities here, either someone deleted and created the group in openZro, thus the changed ID
 		// Or there's a conflict with something else, either way, we just need to take the new ID here
 		nbGroup.Status.GroupID = &group.Id
-		nbGroup.Status.Conditions = openzrov1.NBConditionTrue()
+		nbGroup.Status.Conditions = openzrov1.OZConditionTrue()
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup openzrov1.NBGroup, logger logr.Logger) error {
+func (r *OZGroupReconciler) handleDelete(ctx context.Context, nbGroup openzrov1.OZGroup, logger logr.Logger) error {
 	// Group doesn't exist on openZro, no need for cleanup
 	if nbGroup.Status.GroupID == nil {
 		nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "openzro.io/group-cleanup")
 		err := r.Client.Update(ctx, &nbGroup)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error updating NBGroup", "err", err)
+			logger.Error(errKubernetesAPI, "error updating OZGroup", "err", err)
 			return err
 		}
 
 		return nil
 	}
 
-	err := r.openZro.Groups.Delete(ctx, *nbGroup.Status.GroupID)
+	err := r.OpenZro.Groups.Delete(ctx, *nbGroup.Status.GroupID)
 	if err != nil && !strings.Contains(err.Error(), "not found") && !strings.Contains(err.Error(), "linked") {
 		logger.Error(erropenZroAPI, "error deleting group", "err", err)
 		return err
@@ -151,10 +151,10 @@ func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup openzrov1.
 	if err != nil && strings.Contains(err.Error(), "linked") && !nbGroup.DeletionTimestamp.Add(time.Minute).Before(time.Now()) {
 		logger.Info("group still linked to resources on openzro", "err", err)
 		// Check if group is defined elsewhere in the cluster
-		var groups openzrov1.NBGroupList
+		var groups openzrov1.OZGroupList
 		listErr := r.Client.List(ctx, &groups)
 		if listErr != nil {
-			logger.Error(errKubernetesAPI, "error listing NBGroups", "err", listErr)
+			logger.Error(errKubernetesAPI, "error listing OZGroups", "err", listErr)
 			return listErr
 		}
 		for _, v := range groups.Items {
@@ -167,14 +167,14 @@ func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup openzrov1.
 				nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "openzro.io/group-cleanup")
 				err = r.Client.Update(ctx, &nbGroup)
 				if err != nil {
-					logger.Error(errKubernetesAPI, "error updating NBGroup", "err", err)
+					logger.Error(errKubernetesAPI, "error updating OZGroup", "err", err)
 					return err
 				}
 				return nil
 			}
 		}
 
-		// No other NBGroup with same name on the cluster
+		// No other OZGroup with same name on the cluster
 		// This could be a group created by user elsewhere or some resources belonging to the group are still deleting.
 		return err
 	}
@@ -182,7 +182,7 @@ func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup openzrov1.
 	nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "openzro.io/group-cleanup")
 	err = r.Client.Update(ctx, &nbGroup)
 	if err != nil {
-		logger.Error(errKubernetesAPI, "error updating NBGroup", "err", err)
+		logger.Error(errKubernetesAPI, "error updating OZGroup", "err", err)
 		return err
 	}
 
@@ -190,9 +190,9 @@ func (r *NBGroupReconciler) handleDelete(ctx context.Context, nbGroup openzrov1.
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NBGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OZGroupReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&openzrov1.NBGroup{}).
+		For(&openzrov1.OZGroup{}).
 		Named("ozgroup").
 		Complete(r)
 }

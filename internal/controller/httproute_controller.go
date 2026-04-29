@@ -6,8 +6,8 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -31,7 +31,7 @@ const (
 type HTTPRouteReconciler struct {
 	client.Client
 
-	openZro *openzro.Client
+	OpenZro *openzro.Client
 }
 
 // nolint:gocyclo
@@ -136,7 +136,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 		}
 
 		// Create proxy service.
-		proxyServices, err := r.openZro.ReverseProxyServices.List(ctx)
+		proxyServices, err := r.OpenZro.ReverseProxyServices.List(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -156,12 +156,12 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 					if proxyService.Domain != string(hostname) {
 						continue
 					}
-					_, err := r.openZro.ReverseProxyServices.Update(ctx, proxyService.Id, proxyReq)
+					_, err := r.OpenZro.ReverseProxyServices.Update(ctx, proxyService.Id, proxyReq)
 					if err != nil {
 						return err
 					}
 				}
-				_, err := r.openZro.ReverseProxyServices.Create(ctx, proxyReq)
+				_, err := r.OpenZro.ReverseProxyServices.Create(ctx, proxyReq)
 				if err != nil {
 					return err
 				}
@@ -178,7 +178,7 @@ func (r *HTTPRouteReconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 
 func (r *HTTPRouteReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, hr *gatewayv1.HTTPRoute) (ctrl.Result, error) {
 	// Index all proxy services.
-	proxyServices, err := r.openZro.ReverseProxyServices.List(ctx)
+	proxyServices, err := r.OpenZro.ReverseProxyServices.List(ctx)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -248,7 +248,7 @@ func (r *HTTPRouteReconciler) reconcileDelete(ctx context.Context, sp *patch.Ser
 			if !ok {
 				continue
 			}
-			err = r.openZro.ReverseProxyServices.Delete(ctx, id)
+			err = r.OpenZro.ReverseProxyServices.Delete(ctx, id)
 			if err != nil && !openzro.IsNotFound(err) {
 				return ctrl.Result{}, err
 			}

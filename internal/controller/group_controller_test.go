@@ -27,7 +27,7 @@ var _ = Describe("Group Controller", func() {
 		BeforeEach(func() {
 			controllerReconciler = &GroupReconciler{
 				Client:  k8sClient,
-				openZro: openzromock.Client(),
+				OpenZro: openzromock.Client(),
 			}
 		})
 
@@ -64,7 +64,7 @@ var _ = Describe("Group Controller", func() {
 			Expect(group.Status.GroupID).NotTo(BeEmpty())
 
 			By("crerating a new group when deleted from API")
-			err = controllerReconciler.openZro.Groups.Delete(ctx, group.Status.GroupID)
+			err = controllerReconciler.OpenZro.Groups.Delete(ctx, group.Status.GroupID)
 			Expect(err).NotTo(HaveOccurred())
 			_, err = controllerReconciler.Reconcile(ctx, reconcile.Request{NamespacedName: nn})
 			Expect(err).NotTo(HaveOccurred())

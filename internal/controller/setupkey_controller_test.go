@@ -28,7 +28,7 @@ var _ = Describe("SetupKey Controller", func() {
 		BeforeEach(func() {
 			controllerReconciler = &SetupKeyReconciler{
 				Client:  k8sClient,
-				openZro: openzromock.Client(),
+				OpenZro: openzromock.Client(),
 			}
 		})
 
@@ -72,7 +72,7 @@ var _ = Describe("SetupKey Controller", func() {
 			err = k8sClient.Get(ctx, client.ObjectKeyFromObject(secret), secret)
 			Expect(err).NotTo(HaveOccurred())
 
-			resp, err := controllerReconciler.openZro.SetupKeys.Get(ctx, setupKey.Status.SetupKeyID)
+			resp, err := controllerReconciler.OpenZro.SetupKeys.Get(ctx, setupKey.Status.SetupKeyID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(string(secret.Data[SetupKeySecretKey])).To(Equal(resp.Key))
 		})

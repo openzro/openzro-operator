@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"slices"
 
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 )
 
 func GetDNSZoneByName(ctx context.Context, nbClient *openzro.Client, name string) (api.Zone, error) {

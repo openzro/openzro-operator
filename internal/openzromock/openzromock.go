@@ -9,9 +9,9 @@ import (
 	"net/http/httptest"
 	"sync"
 
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
-	"github.com/openzro/openzro/shared/management/http/util"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
+	"github.com/openzro/openzro/management/server/http/util"
 )
 
 func Client() *openzro.Client {

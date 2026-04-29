@@ -19,15 +19,15 @@ import (
 	"github.com/go-logr/logr"
 	openzrov1 "github.com/openzro/openzro-operator/api/v1"
 	"github.com/openzro/openzro-operator/internal/util"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 )
 
-// NBRoutingPeerReconciler reconciles a NBRoutingPeer object
-type NBRoutingPeerReconciler struct {
+// OZRoutingPeerReconciler reconciles a OZRoutingPeer object
+type OZRoutingPeerReconciler struct {
 	client.Client
 
-	openZro            *openzro.Client
+	OpenZro            *openzro.Client
 	ClientImage        string
 	ClusterName        string
 	ManagementURL      string
@@ -37,15 +37,15 @@ type NBRoutingPeerReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *NBRoutingPeerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	logger := ctrl.Log.WithName("NBRoutingPeer").WithValues("namespace", req.Namespace, "name", req.Name)
-	logger.Info("Reconciling NBRoutingPeer")
+func (r *OZRoutingPeerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
+	logger := ctrl.Log.WithName("OZRoutingPeer").WithValues("namespace", req.Namespace, "name", req.Name)
+	logger.Info("Reconciling OZRoutingPeer")
 
-	ozrp := &openzrov1.NBRoutingPeer{}
+	ozrp := &openzrov1.OZRoutingPeer{}
 	err = r.Get(ctx, req.NamespacedName, ozrp)
 	if err != nil {
 		if !errors.IsNotFound(err) {
-			logger.Error(errKubernetesAPI, "error getting NBRoutingPeer", "err", err)
+			logger.Error(errKubernetesAPI, "error getting OZRoutingPeer", "err", err)
 		}
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
@@ -58,7 +58,7 @@ func (r *NBRoutingPeerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		if !originalNBRP.Status.Equal(ozrp.Status) {
 			err = r.Client.Status().Update(ctx, ozrp)
 			if err != nil {
-				logger.Error(errKubernetesAPI, "error updating NBRoutingPeer Status", "err", err)
+				logger.Error(errKubernetesAPI, "error updating OZRoutingPeer Status", "err", err)
 			}
 		}
 		if err != nil {
@@ -79,47 +79,47 @@ func (r *NBRoutingPeerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return r.handleDelete(ctx, req, ozrp, logger)
 	}
 
-	logger.Info("NBRoutingPeer: Checking network")
+	logger.Info("OZRoutingPeer: Checking network")
 	err = r.handleNetwork(ctx, req, ozrp, logger)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("NBRoutingPeer: Checking groups")
+	logger.Info("OZRoutingPeer: Checking groups")
 	nbGroup, result, err := r.handleGroup(ctx, req, ozrp, logger)
 	if nbGroup == nil {
 		return *result, err
 	}
 
-	logger.Info("NBRoutingPeer: Checking setup keys")
+	logger.Info("OZRoutingPeer: Checking setup keys")
 	result, err = r.handleSetupKey(ctx, req, ozrp, *nbGroup, logger)
 	if result != nil {
 		return *result, err
 	}
 
-	logger.Info("NBRoutingPeer: Checking network router")
+	logger.Info("OZRoutingPeer: Checking network router")
 	err = r.handleRouter(ctx, ozrp, *nbGroup, logger)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("NBRoutingPeer: Checking deployment")
+	logger.Info("OZRoutingPeer: Checking deployment")
 	err = r.handleDeployment(ctx, req, ozrp, logger)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	ozrp.Status.Conditions = openzrov1.NBConditionTrue()
+	ozrp.Status.Conditions = openzrov1.OZConditionTrue()
 	return ctrl.Result{}, nil
 }
 
 // handleDeployment reconcile routing peer Deployment
-func (r *NBRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl.Request, ozrp *openzrov1.NBRoutingPeer, logger logr.Logger) error {
+func (r *OZRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl.Request, ozrp *openzrov1.OZRoutingPeer, logger logr.Logger) error {
 	routingPeerDeployment := appsv1.Deployment{}
 	err := r.Client.Get(ctx, req.NamespacedName, &routingPeerDeployment)
 	if err != nil && !errors.IsNotFound(err) {
 		logger.Error(errKubernetesAPI, "error getting Deployment", "err", err)
-		ozrp.Status.Conditions = openzrov1.NBConditionFalse("internalError", fmt.Sprintf("error getting Deployment: %v", err))
+		ozrp.Status.Conditions = openzrov1.OZConditionFalse("internalError", fmt.Sprintf("error getting Deployment: %v", err))
 		return err
 	}
 
@@ -141,7 +141,7 @@ func (r *NBRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 				OwnerReferences: []v1.OwnerReference{
 					{
 						APIVersion:         openzrov1.GroupVersion.Identifier(),
-						Kind:               "NBRoutingPeer",
+						Kind:               "OZRoutingPeer",
 						Name:               ozrp.Name,
 						UID:                ozrp.UID,
 						BlockOwnerDeletion: util.Ptr(true),
@@ -199,7 +199,7 @@ func (r *NBRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 		err = r.Client.Create(ctx, &routingPeerDeployment)
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error creating Deployment", "err", err)
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("internalError", fmt.Sprintf("error creating Deployment: %v", err))
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("internalError", fmt.Sprintf("error creating Deployment: %v", err))
 			return err
 		}
 	} else if err == nil {
@@ -209,7 +209,7 @@ func (r *NBRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 		updatedDeployment.ObjectMeta.OwnerReferences = []v1.OwnerReference{
 			{
 				APIVersion:         openzrov1.GroupVersion.Identifier(),
-				Kind:               "NBRoutingPeer",
+				Kind:               "OZRoutingPeer",
 				Name:               ozrp.Name,
 				UID:                ozrp.UID,
 				BlockOwnerDeletion: util.Ptr(true),
@@ -269,7 +269,7 @@ func (r *NBRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 		err = r.Client.Patch(ctx, updatedDeployment, patch)
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error updating Deployment", "err", err)
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("internalError", fmt.Sprintf("error updating Deployment: %v", err))
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("internalError", fmt.Sprintf("error updating Deployment: %v", err))
 			return err
 		}
 	}
@@ -278,13 +278,13 @@ func (r *NBRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 }
 
 // handleRouter reconcile network routing peer in openZro management API
-func (r *NBRoutingPeerReconciler) handleRouter(ctx context.Context, ozrp *openzrov1.NBRoutingPeer, nbGroup openzrov1.NBGroup, logger logr.Logger) error {
+func (r *OZRoutingPeerReconciler) handleRouter(ctx context.Context, ozrp *openzrov1.OZRoutingPeer, nbGroup openzrov1.OZGroup, logger logr.Logger) error {
 	// Check NetworkRouter exists
-	routers, err := r.openZro.Networks.Routers(*ozrp.Status.NetworkID).List(ctx)
+	routers, err := r.OpenZro.Networks.Routers(*ozrp.Status.NetworkID).List(ctx)
 
 	if err != nil {
 		logger.Error(erropenZroAPI, "error listing network routers", "err", err)
-		ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error listing network routers: %v", err))
+		ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error listing network routers: %v", err))
 		return err
 	}
 
@@ -294,7 +294,7 @@ func (r *NBRoutingPeerReconciler) handleRouter(ctx context.Context, ozrp *openzr
 			ozrp.Status.RouterID = &routers[0].Id
 		} else {
 			// Create network router
-			router, err := r.openZro.Networks.Routers(*ozrp.Status.NetworkID).Create(ctx, api.NetworkRouterRequest{
+			router, err := r.OpenZro.Networks.Routers(*ozrp.Status.NetworkID).Create(ctx, api.NetworkRouterRequest{
 				Enabled:    true,
 				Masquerade: true,
 				Metric:     9999,
@@ -303,7 +303,7 @@ func (r *NBRoutingPeerReconciler) handleRouter(ctx context.Context, ozrp *openzr
 
 			if err != nil {
 				logger.Error(erropenZroAPI, "error creating network router", "err", err)
-				ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error creating network router: %v", err))
+				ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error creating network router: %v", err))
 				return err
 			}
 
@@ -312,7 +312,7 @@ func (r *NBRoutingPeerReconciler) handleRouter(ctx context.Context, ozrp *openzr
 	} else {
 		// Ensure network router settings are correct
 		if !routers[0].Enabled || !routers[0].Masquerade || routers[0].Metric != 9999 || len(*routers[0].PeerGroups) != 1 || (*routers[0].PeerGroups)[0] != *nbGroup.Status.GroupID {
-			_, err = r.openZro.Networks.Routers(*ozrp.Status.NetworkID).Update(ctx, routers[0].Id, api.NetworkRouterRequest{
+			_, err = r.OpenZro.Networks.Routers(*ozrp.Status.NetworkID).Update(ctx, routers[0].Id, api.NetworkRouterRequest{
 				Enabled:    true,
 				Masquerade: true,
 				Metric:     9999,
@@ -321,7 +321,7 @@ func (r *NBRoutingPeerReconciler) handleRouter(ctx context.Context, ozrp *openzr
 
 			if err != nil {
 				logger.Error(erropenZroAPI, "error updating network router", "err", err)
-				ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error updating network router: %v", err))
+				ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error updating network router: %v", err))
 				return err
 			}
 		}
@@ -331,7 +331,7 @@ func (r *NBRoutingPeerReconciler) handleRouter(ctx context.Context, ozrp *openzr
 }
 
 // handleSetupKey reconcile setup key and regenerate if invalid
-func (r *NBRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.Request, ozrp *openzrov1.NBRoutingPeer, nbGroup openzrov1.NBGroup, logger logr.Logger) (*ctrl.Result, error) {
+func (r *OZRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.Request, ozrp *openzrov1.OZRoutingPeer, nbGroup openzrov1.OZGroup, logger logr.Logger) (*ctrl.Result, error) {
 	networkName := r.ClusterName
 	if r.NamespacedNetworks {
 		networkName += "-" + req.Namespace
@@ -340,7 +340,7 @@ func (r *NBRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 	// Check if setup key exists
 	if ozrp.Status.SetupKeyID == nil {
 		// Create new setup key with group Status.GroupID
-		setupKey, err := r.openZro.SetupKeys.Create(ctx, api.CreateSetupKeyRequest{
+		setupKey, err := r.OpenZro.SetupKeys.Create(ctx, api.CreateSetupKeyRequest{
 			AutoGroups: []string{*nbGroup.Status.GroupID},
 			Ephemeral:  util.Ptr(true),
 			Name:       networkName,
@@ -349,7 +349,7 @@ func (r *NBRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 
 		if err != nil {
 			logger.Error(erropenZroAPI, "error creating setup key", "err", err)
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error creating setup key: %v", err))
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error creating setup key: %v", err))
 			return &ctrl.Result{}, err
 		}
 
@@ -362,7 +362,7 @@ func (r *NBRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 				OwnerReferences: []v1.OwnerReference{
 					{
 						APIVersion:         openzrov1.GroupVersion.Identifier(),
-						Kind:               "NBRoutingPeer",
+						Kind:               "OZRoutingPeer",
 						Name:               ozrp.Name,
 						UID:                ozrp.UID,
 						BlockOwnerDeletion: util.Ptr(true),
@@ -389,25 +389,25 @@ func (r *NBRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error creating Secret", "err", err)
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("internalError", fmt.Sprintf("error creating secret: %v", err))
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("internalError", fmt.Sprintf("error creating secret: %v", err))
 			return &ctrl.Result{}, err
 		}
 	} else {
 		// Check SetupKey is not revoked
-		setupKey, err := r.openZro.SetupKeys.Get(ctx, *ozrp.Status.SetupKeyID)
+		setupKey, err := r.OpenZro.SetupKeys.Get(ctx, *ozrp.Status.SetupKeyID)
 		if err != nil && !strings.Contains(err.Error(), "not found") {
 			logger.Error(erropenZroAPI, "error getting setup key", "err", err)
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error getting setup key: %v", err))
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error getting setup key: %v", err))
 			return &ctrl.Result{}, err
 		}
 
 		if (err != nil && strings.Contains(err.Error(), "not found")) || setupKey == nil || setupKey.Revoked {
 			if setupKey != nil && setupKey.Revoked {
-				err = r.openZro.SetupKeys.Delete(ctx, *ozrp.Status.SetupKeyID)
+				err = r.OpenZro.SetupKeys.Delete(ctx, *ozrp.Status.SetupKeyID)
 
 				if err != nil {
 					logger.Error(erropenZroAPI, "error deleting setup key", "err", err)
-					ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error deleting setup key: %v", err))
+					ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error deleting setup key: %v", err))
 					return &ctrl.Result{}, err
 				}
 			}
@@ -422,24 +422,24 @@ func (r *NBRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 		err = r.Client.Get(ctx, req.NamespacedName, &skSecret)
 		if err != nil && !errors.IsNotFound(err) {
 			logger.Error(errKubernetesAPI, "error getting Secret", "err", err)
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("internalError", fmt.Sprintf("error getting secret: %v", err))
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("internalError", fmt.Sprintf("error getting secret: %v", err))
 			return &ctrl.Result{}, err
 		}
 
 		if _, ok := skSecret.Data["setupKey"]; errors.IsNotFound(err) || !ok {
 			// Someone deleted setup key secret
 			// Revoke SK from openZro and re-generate
-			err = r.openZro.SetupKeys.Delete(ctx, *ozrp.Status.SetupKeyID)
+			err = r.OpenZro.SetupKeys.Delete(ctx, *ozrp.Status.SetupKeyID)
 
 			if err != nil {
 				logger.Error(erropenZroAPI, "error deleting setup key", "err", err)
-				ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error deleting setup key: %v", err))
+				ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error deleting setup key: %v", err))
 				return &ctrl.Result{}, err
 			}
 
 			ozrp.Status.SetupKeyID = nil
 
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("Gone", "generated secret was deleted")
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("Gone", "generated secret was deleted")
 			// Requeue to avoid repeating code
 			return &ctrl.Result{Requeue: true}, nil
 		}
@@ -448,31 +448,31 @@ func (r *NBRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 	return nil, nil
 }
 
-// handleGroup creates/updates NBGroup for routing peer
-func (r *NBRoutingPeerReconciler) handleGroup(ctx context.Context, req ctrl.Request, ozrp *openzrov1.NBRoutingPeer, logger logr.Logger) (*openzrov1.NBGroup, *ctrl.Result, error) {
+// handleGroup creates/updates OZGroup for routing peer
+func (r *OZRoutingPeerReconciler) handleGroup(ctx context.Context, req ctrl.Request, ozrp *openzrov1.OZRoutingPeer, logger logr.Logger) (*openzrov1.OZGroup, *ctrl.Result, error) {
 	networkName := r.ClusterName
 	if r.NamespacedNetworks {
 		networkName += "-" + req.Namespace
 	}
 
 	// Check if openZro Group exists
-	nbGroup := openzrov1.NBGroup{}
+	nbGroup := openzrov1.OZGroup{}
 	err := r.Client.Get(ctx, req.NamespacedName, &nbGroup)
 	if err != nil && !errors.IsNotFound(err) {
-		logger.Error(errKubernetesAPI, "error getting NBGroup", "err", err)
-		ozrp.Status.Conditions = openzrov1.NBConditionFalse("internalError", fmt.Sprintf("error getting NBGroup: %v", err))
+		logger.Error(errKubernetesAPI, "error getting OZGroup", "err", err)
+		ozrp.Status.Conditions = openzrov1.OZConditionFalse("internalError", fmt.Sprintf("error getting OZGroup: %v", err))
 		return nil, &ctrl.Result{}, err
 	}
 
 	if errors.IsNotFound(err) {
-		nbGroup = openzrov1.NBGroup{
+		nbGroup = openzrov1.OZGroup{
 			ObjectMeta: v1.ObjectMeta{
 				Name:      ozrp.Name,
 				Namespace: ozrp.Namespace,
 				OwnerReferences: []v1.OwnerReference{
 					{
 						APIVersion:         openzrov1.GroupVersion.Identifier(),
-						Kind:               "NBRoutingPeer",
+						Kind:               "OZRoutingPeer",
 						Name:               ozrp.Name,
 						UID:                ozrp.UID,
 						BlockOwnerDeletion: util.Ptr(true),
@@ -481,7 +481,7 @@ func (r *NBRoutingPeerReconciler) handleGroup(ctx context.Context, req ctrl.Requ
 				Finalizers: []string{"openzro.io/group-cleanup", "openzro.io/routing-peer-cleanup"},
 				Labels:     r.DefaultLabels,
 			},
-			Spec: openzrov1.NBGroupSpec{
+			Spec: openzrov1.OZGroupSpec{
 				Name: networkName,
 			},
 		}
@@ -489,12 +489,12 @@ func (r *NBRoutingPeerReconciler) handleGroup(ctx context.Context, req ctrl.Requ
 		err = r.Client.Create(ctx, &nbGroup)
 
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error creating NBGroup", "err", err)
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("internalError", fmt.Sprintf("error creating NBGroup: %v", err))
+			logger.Error(errKubernetesAPI, "error creating OZGroup", "err", err)
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("internalError", fmt.Sprintf("error creating OZGroup: %v", err))
 			return nil, &ctrl.Result{}, err
 		}
 
-		// Requeue after 5 seconds to ensure group creation is successful by NBGroup controller.
+		// Requeue after 5 seconds to ensure group creation is successful by OZGroup controller.
 		return nil, &ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
@@ -507,7 +507,7 @@ func (r *NBRoutingPeerReconciler) handleGroup(ctx context.Context, req ctrl.Requ
 }
 
 // handleNetwork Create/Update openZro Network
-func (r *NBRoutingPeerReconciler) handleNetwork(ctx context.Context, req ctrl.Request, ozrp *openzrov1.NBRoutingPeer, logger logr.Logger) error {
+func (r *OZRoutingPeerReconciler) handleNetwork(ctx context.Context, req ctrl.Request, ozrp *openzrov1.OZRoutingPeer, logger logr.Logger) error {
 	networkName := r.ClusterName
 	if r.NamespacedNetworks {
 		networkName += "-" + req.Namespace
@@ -515,10 +515,10 @@ func (r *NBRoutingPeerReconciler) handleNetwork(ctx context.Context, req ctrl.Re
 
 	if ozrp.Status.NetworkID == nil {
 		// Check if network exists
-		networks, err := r.openZro.Networks.List(ctx)
+		networks, err := r.OpenZro.Networks.List(ctx)
 		if err != nil {
 			logger.Error(erropenZroAPI, "error listing networks", "err", err)
-			ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error listing networks: %v", err))
+			ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error listing networks: %v", err))
 			return err
 		}
 		var network *api.Network
@@ -533,13 +533,13 @@ func (r *NBRoutingPeerReconciler) handleNetwork(ctx context.Context, req ctrl.Re
 			ozrp.Status.NetworkID = &network.Id
 		} else {
 			logger.Info("creating network", "name", networkName)
-			network, err := r.openZro.Networks.Create(ctx, api.NetworkRequest{
+			network, err := r.OpenZro.Networks.Create(ctx, api.NetworkRequest{
 				Name:        networkName,
 				Description: &networkDescription,
 			})
 			if err != nil {
 				logger.Error(erropenZroAPI, "error creating network", "err", err)
-				ozrp.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("error creating network: %v", err))
+				ozrp.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("error creating network: %v", err))
 				return err
 			}
 
@@ -549,7 +549,7 @@ func (r *NBRoutingPeerReconciler) handleNetwork(ctx context.Context, req ctrl.Re
 	return nil
 }
 
-func (r *NBRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Request, ozrp *openzrov1.NBRoutingPeer, logger logr.Logger) (ctrl.Result, error) {
+func (r *OZRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Request, ozrp *openzrov1.OZRoutingPeer, logger logr.Logger) (ctrl.Result, error) {
 	nbDeployment := appsv1.Deployment{}
 	err := r.Client.Get(ctx, req.NamespacedName, &nbDeployment)
 	if err != nil && !errors.IsNotFound(err) {
@@ -566,7 +566,7 @@ func (r *NBRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Req
 
 	if ozrp.Status.SetupKeyID != nil {
 		logger.Info("Deleting setup key", "id", *ozrp.Status.SetupKeyID)
-		err = r.openZro.SetupKeys.Delete(ctx, *ozrp.Status.SetupKeyID)
+		err = r.OpenZro.SetupKeys.Delete(ctx, *ozrp.Status.SetupKeyID)
 		if err != nil && !strings.Contains(err.Error(), "not found") {
 			logger.Error(erropenZroAPI, "error deleting setupKey", "err", err)
 			return ctrl.Result{}, err
@@ -577,27 +577,27 @@ func (r *NBRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Req
 		logger.Info("Setup key deleted", "id", setupKeyID)
 	}
 
-	nbGroup := openzrov1.NBGroup{}
+	nbGroup := openzrov1.OZGroup{}
 	err = r.Client.Get(ctx, req.NamespacedName, &nbGroup)
 	if err != nil && !errors.IsNotFound(err) {
-		logger.Error(errKubernetesAPI, "error getting NBGroup", "err", err)
+		logger.Error(errKubernetesAPI, "error getting OZGroup", "err", err)
 		return ctrl.Result{}, err
 	}
 
 	if ozrp.Status.NetworkID != nil {
-		nbResourceList := openzrov1.NBResourceList{}
+		nbResourceList := openzrov1.OZResourceList{}
 		err = r.Client.List(ctx, &nbResourceList)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error listing NBResource", "err", err)
+			logger.Error(errKubernetesAPI, "error listing OZResource", "err", err)
 			return ctrl.Result{}, err
 		}
 
 		for _, ozrs := range nbResourceList.Items {
 			if ozrs.Spec.NetworkID == *ozrp.Status.NetworkID {
-				logger.Info("Deleting NBResource", "namespace", ozrs.Namespace, "name", ozrs.Name)
+				logger.Info("Deleting OZResource", "namespace", ozrs.Namespace, "name", ozrs.Name)
 				err = r.Client.Delete(ctx, &ozrs)
 				if err != nil {
-					logger.Error(errKubernetesAPI, "error deleting NBResource", "err", err)
+					logger.Error(errKubernetesAPI, "error deleting OZResource", "err", err)
 					return ctrl.Result{}, err
 				}
 			}
@@ -605,7 +605,7 @@ func (r *NBRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Req
 
 		if len(nbResourceList.Items) == 0 {
 			logger.Info("Deleting openZro Network", "id", *ozrp.Status.NetworkID)
-			err = r.openZro.Networks.Delete(ctx, *ozrp.Status.NetworkID)
+			err = r.OpenZro.Networks.Delete(ctx, *ozrp.Status.NetworkID)
 			if err != nil && !strings.Contains(err.Error(), "not found") {
 				logger.Error(erropenZroAPI, "error deleting Network", "err", err)
 				return ctrl.Result{}, err
@@ -618,10 +618,10 @@ func (r *NBRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Req
 
 	if nbGroup.Spec.Name != "" && slices.Contains(nbGroup.Finalizers, "openzro.io/routing-peer-cleanup") {
 		nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "openzro.io/routing-peer-cleanup")
-		logger.Info("Removing openzro.io/routing-peer-cleanup finalizer NBGroup", "namespace", nbGroup.Namespace, "name", nbGroup.Name)
+		logger.Info("Removing openzro.io/routing-peer-cleanup finalizer OZGroup", "namespace", nbGroup.Namespace, "name", nbGroup.Name)
 		err = r.Client.Update(ctx, &nbGroup)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error deleting NBGroup", "err", err)
+			logger.Error(errKubernetesAPI, "error deleting OZGroup", "err", err)
 			return ctrl.Result{}, err
 		}
 	}
@@ -635,7 +635,7 @@ func (r *NBRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Req
 		ozrp.Finalizers = nil
 		err = r.Client.Update(ctx, ozrp)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error updating NBRoutingPeer finalizers", "err", err)
+			logger.Error(errKubernetesAPI, "error updating OZRoutingPeer finalizers", "err", err)
 			return ctrl.Result{}, err
 		}
 	}
@@ -643,8 +643,8 @@ func (r *NBRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, nil
 }
 
-// buildSecurityContext creates the appropriate SecurityContext based on the NBRoutingPeer spec
-func (r *NBRoutingPeerReconciler) buildSecurityContext(ozrp *openzrov1.NBRoutingPeer) *corev1.SecurityContext {
+// buildSecurityContext creates the appropriate SecurityContext based on the OZRoutingPeer spec
+func (r *OZRoutingPeerReconciler) buildSecurityContext(ozrp *openzrov1.OZRoutingPeer) *corev1.SecurityContext {
 	securityContext := &corev1.SecurityContext{
 		Capabilities: &corev1.Capabilities{
 			Add: []corev1.Capability{
@@ -662,12 +662,12 @@ func (r *NBRoutingPeerReconciler) buildSecurityContext(ozrp *openzrov1.NBRouting
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NBRoutingPeerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OZRoutingPeerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&openzrov1.NBRoutingPeer{}).
+		For(&openzrov1.OZRoutingPeer{}).
 		Named("ozroutingpeer").
-		Watches(&appsv1.Deployment{}, handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &openzrov1.NBRoutingPeer{})).
-		Watches(&corev1.Secret{}, handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &openzrov1.NBRoutingPeer{})).
-		Watches(&openzrov1.NBGroup{}, handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &openzrov1.NBRoutingPeer{})).
+		Watches(&appsv1.Deployment{}, handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &openzrov1.OZRoutingPeer{})).
+		Watches(&corev1.Secret{}, handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &openzrov1.OZRoutingPeer{})).
+		Watches(&openzrov1.OZGroup{}, handler.EnqueueRequestForOwner(mgr.GetScheme(), mgr.GetRESTMapper(), &openzrov1.OZRoutingPeer{})).
 		Complete(r)
 }

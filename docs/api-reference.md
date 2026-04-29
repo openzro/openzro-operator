@@ -1,7 +1,7 @@
 # API Reference
 
 ## Packages
-- [openzro.io/v1alpha1](#openzrov1alpha1)
+- [openzro.io/v1alpha1](#openzroiov1alpha1)
 
 
 ## openzro.io/v1alpha1

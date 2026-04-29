@@ -29,7 +29,7 @@ import (
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	openzro "github.com/openzro/openzro/management/client/rest"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -103,7 +103,7 @@ func main() {
 		&allowAutomaticPolicyCreation,
 		"allow-automatic-policy-creation",
 		false,
-		"Allow creating NBPolicy resources from annotations on Services",
+		"Allow creating OZPolicy resources from annotations on Services",
 	)
 	flag.StringVar(
 		&defaultLabels,
@@ -206,11 +206,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	nbSetupKeyController := &controller.NBSetupKeyReconciler{
+	nbSetupKeyController := &controller.OZSetupKeyReconciler{
 		Client: mgr.GetClient(),
 	}
 	if err = nbSetupKeyController.SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create controller", "controller", "NBSetupKey")
+		setupLog.Error(err, "unable to create controller", "controller", "OZSetupKey")
 		os.Exit(1)
 	}
 
@@ -228,16 +228,16 @@ func main() {
 			openzro.WithUserAgent("openzro-operator"),
 		)
 
-		if err = (&controller.NBRoutingPeerReconciler{
+		if err = (&controller.OZRoutingPeerReconciler{
 			Client:             mgr.GetClient(),
-			openZro:            nbClient,
+			OpenZro:            nbClient,
 			ClientImage:        clientImage,
 			ClusterName:        clusterName,
 			ManagementURL:      managementURL,
 			NamespacedNetworks: namespacedNetworks,
 			DefaultLabels:      defaultLabelsMap,
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "NBRoutingPeer")
+			setupLog.Error(err, "unable to create controller", "controller", "OZRoutingPeer")
 			os.Exit(1)
 		}
 
@@ -253,57 +253,57 @@ func main() {
 			os.Exit(1)
 		}
 
-		if err = (&controller.NBResourceReconciler{
+		if err = (&controller.OZResourceReconciler{
 			Client:                       mgr.GetClient(),
-			openZro:                      nbClient,
+			OpenZro:                      nbClient,
 			AllowAutomaticPolicyCreation: allowAutomaticPolicyCreation,
 			ClusterName:                  clusterName,
 			DefaultLabels:                defaultLabelsMap,
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "NBResource")
+			setupLog.Error(err, "unable to create controller", "controller", "OZResource")
 			os.Exit(1)
 		}
 
-		if err = (&controller.NBGroupReconciler{
+		if err = (&controller.OZGroupReconciler{
 			Client:  mgr.GetClient(),
-			openZro: nbClient,
+			OpenZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "NBGroup")
+			setupLog.Error(err, "unable to create controller", "controller", "OZGroup")
 			os.Exit(1)
 		}
 
-		if err = (&controller.NBPolicyReconciler{
+		if err = (&controller.OZPolicyReconciler{
 			Client:  mgr.GetClient(),
-			openZro: nbClient,
+			OpenZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create controller", "controller", "NBPolicy")
+			setupLog.Error(err, "unable to create controller", "controller", "OZPolicy")
 			os.Exit(1)
 		}
 
 		if enableWebhooks {
 			if err = webhookopenzrov1.SetupNBGroupWebhookWithManager(mgr); err != nil {
-				setupLog.Error(err, "unable to create webhook", "webhook", "NBGroup")
+				setupLog.Error(err, "unable to create webhook", "webhook", "OZGroup")
 				os.Exit(1)
 			}
 		}
 
 		if err := (&controller.SetupKeyReconciler{
 			Client:  mgr.GetClient(),
-			openZro: nbClient,
+			OpenZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "Failed to create controller", "controller", "SetupKey")
 			os.Exit(1)
 		}
 		if err := (&controller.GroupReconciler{
 			Client:  mgr.GetClient(),
-			openZro: nbClient,
+			OpenZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "Failed to create controller", "controller", "Group")
 			os.Exit(1)
 		}
 		if err := (&controller.NetworkRouterReconciler{
 			Client:        mgr.GetClient(),
-			openZro:       nbClient,
+			OpenZro:       nbClient,
 			ClientImage:   clientImage,
 			ManagementURL: managementURL,
 		}).SetupWithManager(mgr); err != nil {
@@ -312,7 +312,7 @@ func main() {
 		}
 		if err := (&controller.NetworkResourceReconciler{
 			Client:  mgr.GetClient(),
-			openZro: nbClient,
+			OpenZro: nbClient,
 		}).SetupWithManager(mgr); err != nil {
 			setupLog.Error(err, "Failed to create controller", "controller", "NetworkResource")
 			os.Exit(1)
@@ -333,7 +333,7 @@ func main() {
 			}
 			if err = (&controller.HTTPRouteReconciler{
 				Client:  mgr.GetClient(),
-				openZro: nbClient,
+				OpenZro: nbClient,
 			}).SetupWithManager(mgr); err != nil {
 				setupLog.Error(err, "unable to create controller", "controller", "HTTPRoute")
 				os.Exit(1)

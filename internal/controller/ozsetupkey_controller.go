@@ -33,8 +33,8 @@ import (
 	openzrov1 "github.com/openzro/openzro-operator/api/v1"
 )
 
-// NBSetupKeyReconciler reconciles a NBSetupKey object
-type NBSetupKeyReconciler struct {
+// OZSetupKeyReconciler reconciles a OZSetupKey object
+type OZSetupKeyReconciler struct {
 	client.Client
 
 	ReferencedSecrets map[string]types.NamespacedName
@@ -42,23 +42,23 @@ type NBSetupKeyReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *NBSetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := ctrl.Log.WithName("NBSetupKey").WithValues("namespace", req.Namespace, "name", req.Name)
-	logger.Info("Reconciling NBSetupKey")
+func (r *OZSetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := ctrl.Log.WithName("OZSetupKey").WithValues("namespace", req.Namespace, "name", req.Name)
+	logger.Info("Reconciling OZSetupKey")
 
-	nbSetupKey := openzrov1.NBSetupKey{}
+	nbSetupKey := openzrov1.OZSetupKey{}
 	err := r.Get(ctx, req.NamespacedName, &nbSetupKey)
 	if err != nil {
-		logger.Error(fmt.Errorf("internalError"), "error getting NBSetupKey", "err", err)
+		logger.Error(fmt.Errorf("internalError"), "error getting OZSetupKey", "err", err)
 		return ctrl.Result{}, nil
 	}
 
 	if nbSetupKey.Spec.SecretKeyRef.Name == "" || nbSetupKey.Spec.SecretKeyRef.Key == "" {
-		logger.Error(fmt.Errorf("invalid NBSetupKey"), "secretKeyRef must contain both secret name and secret key")
-		return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.NBSetupKeyStatus{
-			Conditions: []openzrov1.NBCondition{
+		logger.Error(fmt.Errorf("invalid OZSetupKey"), "secretKeyRef must contain both secret name and secret key")
+		return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.OZSetupKeyStatus{
+			Conditions: []openzrov1.OZCondition{
 				{
-					Type:          openzrov1.NBSetupKeyReady,
+					Type:          openzrov1.OZSetupKeyReady,
 					Status:        corev1.ConditionFalse,
 					LastProbeTime: v1.Now(),
 					Reason:        "InvalidConfig",
@@ -84,9 +84,9 @@ func (r *NBSetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			logger.Error(fmt.Errorf("internalError"), "error getting secret", "err", err)
 			return ctrl.Result{}, err
 		}
-		logger.Error(fmt.Errorf("invalid NBSetupKey"), "secret referenced not found", "err", err)
-		return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.NBSetupKeyStatus{Conditions: []openzrov1.NBCondition{{
-			Type:          openzrov1.NBSetupKeyReady,
+		logger.Error(fmt.Errorf("invalid OZSetupKey"), "secret referenced not found", "err", err)
+		return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.OZSetupKeyStatus{Conditions: []openzrov1.OZCondition{{
+			Type:          openzrov1.OZSetupKeyReady,
 			Status:        corev1.ConditionFalse,
 			LastProbeTime: v1.Now(),
 			Reason:        "SecretNotExists",
@@ -96,9 +96,9 @@ func (r *NBSetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	uuidBytes, ok := secret.Data[nbSetupKey.Spec.SecretKeyRef.Key]
 	if !ok {
-		logger.Error(fmt.Errorf("invalid NBSetupKey"), "secret key referenced not found")
-		return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.NBSetupKeyStatus{Conditions: []openzrov1.NBCondition{{
-			Type:          openzrov1.NBSetupKeyReady,
+		logger.Error(fmt.Errorf("invalid OZSetupKey"), "secret key referenced not found")
+		return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.OZSetupKeyStatus{Conditions: []openzrov1.OZCondition{{
+			Type:          openzrov1.OZSetupKeyReady,
 			Status:        corev1.ConditionFalse,
 			LastProbeTime: v1.Now(),
 			Reason:        "SecretKeyNotExists",
@@ -108,34 +108,34 @@ func (r *NBSetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	_, err = uuid.Parse(string(uuidBytes))
 	if err != nil {
-		logger.Error(fmt.Errorf("invalid NBSetupKey"), "setupKey is not a valid UUID", "err", err)
-		return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.NBSetupKeyStatus{Conditions: []openzrov1.NBCondition{{
-			Type:          openzrov1.NBSetupKeyReady,
+		logger.Error(fmt.Errorf("invalid OZSetupKey"), "setupKey is not a valid UUID", "err", err)
+		return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.OZSetupKeyStatus{Conditions: []openzrov1.OZCondition{{
+			Type:          openzrov1.OZSetupKeyReady,
 			Status:        corev1.ConditionFalse,
 			LastProbeTime: v1.Now(),
 			Reason:        "InvalidSetupKey",
 			Message:       "Referenced secret is not a valid SetupKey",
 		}}})
 	}
-	return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.NBSetupKeyStatus{Conditions: []openzrov1.NBCondition{{
-		Type:          openzrov1.NBSetupKeyReady,
+	return ctrl.Result{}, r.setStatus(ctx, &nbSetupKey, openzrov1.OZSetupKeyStatus{Conditions: []openzrov1.OZCondition{{
+		Type:          openzrov1.OZSetupKeyReady,
 		Status:        corev1.ConditionTrue,
 		LastProbeTime: v1.Now(),
 	}}})
 }
 
-func (r *NBSetupKeyReconciler) setStatus(ctx context.Context, ozsetupkey *openzrov1.NBSetupKey, status openzrov1.NBSetupKeyStatus) error {
+func (r *OZSetupKeyReconciler) setStatus(ctx context.Context, ozsetupkey *openzrov1.OZSetupKey, status openzrov1.OZSetupKeyStatus) error {
 	ozsetupkey.Status = status
 	err := r.Status().Update(ctx, ozsetupkey)
 	return err
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NBSetupKeyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OZSetupKeyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	r.ReferencedSecrets = make(map[string]types.NamespacedName)
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&openzrov1.NBSetupKey{}).
+		For(&openzrov1.OZSetupKey{}).
 		Named("ozsetupkey").
 		Watches(
 			&corev1.Secret{},

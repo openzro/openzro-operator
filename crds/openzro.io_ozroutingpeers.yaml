@@ -8,8 +8,8 @@ metadata:
 spec:
   group: openzro.io
   names:
-    kind: NBRoutingPeer
-    listKind: NBRoutingPeerList
+    kind: OZRoutingPeer
+    listKind: OZRoutingPeerList
     plural: ozroutingpeers
     singular: ozroutingpeer
   scope: Namespaced
@@ -17,7 +17,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: NBRoutingPeer is the Schema for the ozroutingpeers API.
+        description: OZRoutingPeer is the Schema for the ozroutingpeers API.
         properties:
           apiVersion:
             description: |-
@@ -37,7 +37,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NBRoutingPeerSpec defines the desired state of NBRoutingPeer.
+            description: OZRoutingPeerSpec defines the desired state of OZRoutingPeer.
             properties:
               annotations:
                 additionalProperties:
@@ -153,11 +153,11 @@ spec:
                 type: array
             type: object
           status:
-            description: NBRoutingPeerStatus defines the observed state of NBRoutingPeer.
+            description: OZRoutingPeerStatus defines the observed state of OZRoutingPeer.
             properties:
               conditions:
                 items:
-                  description: NBCondition defines a condition in NBSetupKey status.
+                  description: OZCondition defines a condition in OZSetupKey status.
                   properties:
                     lastProbeTime:
                       description: Last time we probed the condition.

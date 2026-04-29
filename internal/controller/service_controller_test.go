@@ -1,10 +1,10 @@
 package controller
 
 import (
-	openzrov1 "github.com/openzro/openzro-operator/api/v1"
-	"github.com/openzro/openzro-operator/internal/util"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	openzrov1 "github.com/openzro/openzro-operator/api/v1"
+	"github.com/openzro/openzro-operator/internal/util"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -85,7 +85,7 @@ var _ = Describe("Service Controller", func() {
 				}
 			}
 
-			ozrp := &openzrov1.NBRoutingPeer{}
+			ozrp := &openzrov1.OZRoutingPeer{}
 			err = k8sClient.Get(ctx, types.NamespacedName{Namespace: "default", Name: "router"}, ozrp)
 			if !errors.IsNotFound(err) {
 				if len(ozrp.Finalizers) > 0 {
@@ -99,7 +99,7 @@ var _ = Describe("Service Controller", func() {
 				}
 			}
 
-			nbResource := &openzrov1.NBResource{}
+			nbResource := &openzrov1.OZResource{}
 			err = k8sClient.Get(ctx, typeNamespacedName, nbResource)
 			if !errors.IsNotFound(err) {
 				if len(nbResource.Finalizers) > 0 {
@@ -123,11 +123,11 @@ var _ = Describe("Service Controller", func() {
 					Expect(err).NotTo(HaveOccurred())
 					Expect(k8sClient.Get(ctx, typeNamespacedName, service)).To(Succeed())
 					Expect(service.Finalizers).To(BeEmpty())
-					nbResource := &openzrov1.NBResource{}
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).NotTo(Succeed())
 				})
 			})
-			When("NBRoutingPeer doesn't exist", func() {
+			When("OZRoutingPeer doesn't exist", func() {
 				BeforeEach(func() {
 					if service.Annotations == nil {
 						service.Annotations = make(map[string]string)
@@ -136,13 +136,13 @@ var _ = Describe("Service Controller", func() {
 					Expect(k8sClient.Update(ctx, service)).To(Succeed())
 				})
 
-				It("should create NBRoutingPeer and requeue until network ID is available", func() {
+				It("should create OZRoutingPeer and requeue until network ID is available", func() {
 					res, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 						NamespacedName: typeNamespacedName,
 					})
 					Expect(err).NotTo(HaveOccurred())
 					Expect(res.RequeueAfter).NotTo(BeZero())
-					ozrp := &openzrov1.NBRoutingPeer{}
+					ozrp := &openzrov1.OZRoutingPeer{}
 					Expect(k8sClient.Get(ctx, types.NamespacedName{Namespace: typeNamespacedName.Namespace, Name: "router"}, ozrp)).To(Succeed())
 					Expect(ozrp.Labels).To(HaveKeyWithValue("dog", "bark"))
 					res, err = controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -159,14 +159,14 @@ var _ = Describe("Service Controller", func() {
 					Expect(res.RequeueAfter).To(BeZero())
 				})
 			})
-			When("NBRoutingPeer exists", func() {
+			When("OZRoutingPeer exists", func() {
 				BeforeEach(func() {
-					ozrp := &openzrov1.NBRoutingPeer{
+					ozrp := &openzrov1.OZRoutingPeer{
 						ObjectMeta: v1.ObjectMeta{
 							Namespace: typeNamespacedName.Namespace,
 							Name:      "router",
 						},
-						Spec: openzrov1.NBRoutingPeerSpec{},
+						Spec: openzrov1.OZRoutingPeerSpec{},
 					}
 					Expect(k8sClient.Create(ctx, ozrp)).To(Succeed())
 
@@ -190,12 +190,12 @@ var _ = Describe("Service Controller", func() {
 						Expect(service.Finalizers).To(ContainElement("openzro.io/cleanup"))
 					})
 					When("nothing else is specified", func() {
-						It("should create NBResource with default values", func() {
+						It("should create OZResource with default values", func() {
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							nbResource := &openzrov1.NBResource{}
+							nbResource := &openzrov1.OZResource{}
 							Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 							Expect(nbResource.Spec.Address).To(Equal(typeNamespacedName.Name + "." + typeNamespacedName.Namespace + "." + controllerReconciler.ClusterDNS))
 							Expect(nbResource.Spec.Groups).To(ConsistOf([]string{controllerReconciler.ClusterName + "-" + typeNamespacedName.Namespace + "-" + typeNamespacedName.Name}))
@@ -213,12 +213,12 @@ var _ = Describe("Service Controller", func() {
 							Expect(k8sClient.Update(ctx, service)).To(Succeed())
 						})
 						When("nothing is restricted", func() {
-							It("should create NBResource with policy", func() {
+							It("should create OZResource with policy", func() {
 								_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 									NamespacedName: typeNamespacedName,
 								})
 								Expect(err).NotTo(HaveOccurred())
-								nbResource := &openzrov1.NBResource{}
+								nbResource := &openzrov1.OZResource{}
 								Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 								Expect(nbResource.Spec.PolicyName).To(Equal(policyName))
 								Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{443, 80}))
@@ -226,7 +226,7 @@ var _ = Describe("Service Controller", func() {
 							})
 						})
 						When("ports are restricted", func() {
-							It("should create NBResource with policy and only specified ports", func() {
+							It("should create OZResource with policy and only specified ports", func() {
 								service.Annotations[servicePortsAnnotation] = "80"
 								Expect(k8sClient.Update(ctx, service)).To(Succeed())
 
@@ -234,7 +234,7 @@ var _ = Describe("Service Controller", func() {
 									NamespacedName: typeNamespacedName,
 								})
 								Expect(err).NotTo(HaveOccurred())
-								nbResource := &openzrov1.NBResource{}
+								nbResource := &openzrov1.OZResource{}
 								Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 								Expect(nbResource.Spec.PolicyName).To(Equal(policyName))
 								Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{80}))
@@ -242,7 +242,7 @@ var _ = Describe("Service Controller", func() {
 							})
 						})
 						When("protocol is restricted", func() {
-							It("should create NBResource with policy and only specified protocol", func() {
+							It("should create OZResource with policy and only specified protocol", func() {
 								service.Annotations[serviceProtocolAnnotation] = "tcp"
 								Expect(k8sClient.Update(ctx, service)).To(Succeed())
 
@@ -250,7 +250,7 @@ var _ = Describe("Service Controller", func() {
 									NamespacedName: typeNamespacedName,
 								})
 								Expect(err).NotTo(HaveOccurred())
-								nbResource := &openzrov1.NBResource{}
+								nbResource := &openzrov1.OZResource{}
 								Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 								Expect(nbResource.Spec.PolicyName).To(Equal(policyName))
 								Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{80, 443}))
@@ -259,27 +259,27 @@ var _ = Describe("Service Controller", func() {
 						})
 					})
 					When("resource name is specified", func() {
-						It("should create NBResource with specified name", func() {
+						It("should create OZResource with specified name", func() {
 							service.Annotations[serviceResourceAnnotation] = "meow"
 							Expect(k8sClient.Update(ctx, service)).To(Succeed())
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							nbResource := &openzrov1.NBResource{}
+							nbResource := &openzrov1.OZResource{}
 							Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 							Expect(nbResource.Spec.Name).To(Equal("meow"))
 						})
 					})
 					When("resource groups specified", func() {
-						It("should create NBResource with specified groups", func() {
+						It("should create OZResource with specified groups", func() {
 							service.Annotations[serviceGroupsAnnotation] = "meow, wow ,test"
 							Expect(k8sClient.Update(ctx, service)).To(Succeed())
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							nbResource := &openzrov1.NBResource{}
+							nbResource := &openzrov1.OZResource{}
 							Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 							Expect(nbResource.Spec.Groups).To(ConsistOf([]string{"meow", "wow", policyName}))
 						})
@@ -289,12 +289,12 @@ var _ = Describe("Service Controller", func() {
 		})
 		When("Service is already exposed", func() {
 			BeforeEach(func() {
-				nbResource := &openzrov1.NBResource{
+				nbResource := &openzrov1.OZResource{
 					ObjectMeta: v1.ObjectMeta{
 						Name:      typeNamespacedName.Name,
 						Namespace: typeNamespacedName.Namespace,
 					},
-					Spec: openzrov1.NBResourceSpec{
+					Spec: openzrov1.OZResourceSpec{
 						Name:      typeNamespacedName.Namespace + "-" + typeNamespacedName.Name,
 						Address:   typeNamespacedName.Name + "." + typeNamespacedName.Namespace + "." + controllerReconciler.ClusterDNS,
 						Groups:    []string{controllerReconciler.ClusterName + "-" + typeNamespacedName.Namespace + "-" + typeNamespacedName.Name},
@@ -309,12 +309,12 @@ var _ = Describe("Service Controller", func() {
 				service.Annotations[ServiceExposeAnnotation] = "true"
 				Expect(k8sClient.Update(ctx, service)).To(Succeed())
 
-				ozrp := &openzrov1.NBRoutingPeer{
+				ozrp := &openzrov1.OZRoutingPeer{
 					ObjectMeta: v1.ObjectMeta{
 						Namespace: typeNamespacedName.Namespace,
 						Name:      "router",
 					},
-					Spec: openzrov1.NBRoutingPeerSpec{},
+					Spec: openzrov1.OZRoutingPeerSpec{},
 				}
 				Expect(k8sClient.Create(ctx, ozrp)).To(Succeed())
 
@@ -327,12 +327,12 @@ var _ = Describe("Service Controller", func() {
 					delete(service.Annotations, ServiceExposeAnnotation)
 					Expect(k8sClient.Update(ctx, service)).To(Succeed())
 				})
-				It("should delete NBResource", func() {
+				It("should delete OZResource", func() {
 					_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 						NamespacedName: typeNamespacedName,
 					})
 					Expect(err).NotTo(HaveOccurred())
-					nbResource := &openzrov1.NBResource{}
+					nbResource := &openzrov1.OZResource{}
 					err = k8sClient.Get(ctx, typeNamespacedName, nbResource)
 					if !errors.IsNotFound(err) {
 						Expect(nbResource.DeletionTimestamp).NotTo(BeNil())
@@ -349,7 +349,7 @@ var _ = Describe("Service Controller", func() {
 			})
 			When("Nothing changes", func() {
 				It("should do nothing", func() {
-					nbResource := &openzrov1.NBResource{}
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					resourceVersion := nbResource.ResourceVersion
 
@@ -358,13 +358,13 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &openzrov1.NBResource{}
+					nbResource = &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(resourceVersion).To(BeEquivalentTo(nbResource.ResourceVersion))
 				})
 			})
 			When("policy changes", func() {
-				It("should update policy in NBResource spec", func() {
+				It("should update policy in OZResource spec", func() {
 					service.Annotations[servicePolicyAnnotation] = policyName
 					Expect(k8sClient.Update(ctx, service)).To(Succeed())
 					_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -372,14 +372,14 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource := &openzrov1.NBResource{}
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.PolicyName).To(Equal(policyName))
 				})
 			})
 			When("policy is removed", func() {
-				It("should remove policy in NBResource spec", func() {
-					nbResource := &openzrov1.NBResource{}
+				It("should remove policy in OZResource spec", func() {
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					Expect(k8sClient.Update(ctx, nbResource)).To(Succeed())
@@ -389,14 +389,14 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &openzrov1.NBResource{}
+					nbResource = &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.PolicyName).To(Equal(""))
 				})
 			})
 			When("policy ports changes", func() {
-				It("should update ports in NBResource spec", func() {
-					nbResource := &openzrov1.NBResource{}
+				It("should update ports in OZResource spec", func() {
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					nbResource.Spec.TCPPorts = []int32{443, 80}
@@ -412,15 +412,15 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &openzrov1.NBResource{}
+					nbResource = &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{80}))
 					Expect(nbResource.Spec.UDPPorts).To(ConsistOf([]int32{80}))
 				})
 			})
 			When("policy protocol changes", func() {
-				It("should update protocol in NBResource spec", func() {
-					nbResource := &openzrov1.NBResource{}
+				It("should update protocol in OZResource spec", func() {
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					nbResource.Spec.TCPPorts = []int32{443, 80}
@@ -436,15 +436,15 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &openzrov1.NBResource{}
+					nbResource = &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.TCPPorts).To(ConsistOf([]int32{80, 443}))
 					Expect(nbResource.Spec.UDPPorts).To(BeEmpty())
 				})
 			})
 			When("policy friendly name changes", func() {
-				It("should update policy friendly name in NBResource spec", func() {
-					nbResource := &openzrov1.NBResource{}
+				It("should update policy friendly name in OZResource spec", func() {
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					Expect(k8sClient.Update(ctx, nbResource)).To(Succeed())
@@ -458,14 +458,14 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &openzrov1.NBResource{}
+					nbResource = &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.PolicyFriendlyName).To(BeEquivalentTo(map[string]string{"test": "toast", "meow": "meow"}))
 				})
 			})
 			When("policy source groups changes", func() {
-				It("should update policy source groups in NBResource spec", func() {
-					nbResource := &openzrov1.NBResource{}
+				It("should update policy source groups in OZResource spec", func() {
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					nbResource.Spec.PolicyName = policyName
 					Expect(k8sClient.Update(ctx, nbResource)).To(Succeed())
@@ -479,13 +479,13 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource = &openzrov1.NBResource{}
+					nbResource = &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.PolicySourceGroups).To(BeEquivalentTo([]string{"test"}))
 				})
 			})
 			When("resource name changes", func() {
-				It("should update name in NBResource spec", func() {
+				It("should update name in OZResource spec", func() {
 					service.Annotations[serviceResourceAnnotation] = "meow"
 					Expect(k8sClient.Update(ctx, service)).To(Succeed())
 					_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -493,13 +493,13 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource := &openzrov1.NBResource{}
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.Name).To(Equal("meow"))
 				})
 			})
 			When("resource groups changes", func() {
-				It("should update groups in NBResource spec", func() {
+				It("should update groups in OZResource spec", func() {
 					service.Annotations[serviceGroupsAnnotation] = "a7medmo7sen, pewpewpew"
 					Expect(k8sClient.Update(ctx, service)).To(Succeed())
 					_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
@@ -507,7 +507,7 @@ var _ = Describe("Service Controller", func() {
 					})
 					Expect(err).NotTo(HaveOccurred())
 
-					nbResource := &openzrov1.NBResource{}
+					nbResource := &openzrov1.OZResource{}
 					Expect(k8sClient.Get(ctx, typeNamespacedName, nbResource)).To(Succeed())
 					Expect(nbResource.Spec.Groups).To(ConsistOf([]string{"a7medmo7sen", "pewpewpew"}))
 				})

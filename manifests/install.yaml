@@ -10,8 +10,8 @@ metadata:
 spec:
   group: openzro.io
   names:
-    kind: NBGroup
-    listKind: NBGroupList
+    kind: OZGroup
+    listKind: OZGroupList
     plural: ozgroups
     singular: ozgroup
   scope: Namespaced
@@ -19,7 +19,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: NBGroup is the Schema for the ozgroups API.
+        description: OZGroup is the Schema for the ozgroups API.
         properties:
           apiVersion:
             description: |-
@@ -39,7 +39,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NBGroupSpec defines the desired state of NBGroup.
+            description: OZGroupSpec defines the desired state of OZGroup.
             properties:
               name:
                 minLength: 1
@@ -51,11 +51,11 @@ spec:
             - name
             type: object
           status:
-            description: NBGroupStatus defines the observed state of NBGroup.
+            description: OZGroupStatus defines the observed state of OZGroup.
             properties:
               conditions:
                 items:
-                  description: NBCondition defines a condition in NBSetupKey status.
+                  description: OZCondition defines a condition in OZSetupKey status.
                   properties:
                     lastProbeTime:
                       description: Last time we probed the condition.
@@ -108,8 +108,8 @@ metadata:
 spec:
   group: openzro.io
   names:
-    kind: NBPolicy
-    listKind: NBPolicyList
+    kind: OZPolicy
+    listKind: OZPolicyList
     plural: ozpolicies
     singular: ozpolicy
   scope: Cluster
@@ -117,7 +117,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: NBPolicy is the Schema for the ozpolicies API.
+        description: OZPolicy is the Schema for the ozpolicies API.
         properties:
           apiVersion:
             description: |-
@@ -137,7 +137,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NBPolicySpec defines the desired state of NBPolicy.
+            description: OZPolicySpec defines the desired state of OZPolicy.
             properties:
               bidirectional:
                 default: true
@@ -176,11 +176,11 @@ spec:
             - name
             type: object
           status:
-            description: NBPolicyStatus defines the observed state of NBPolicy.
+            description: OZPolicyStatus defines the observed state of OZPolicy.
             properties:
               conditions:
                 items:
-                  description: NBCondition defines a condition in NBSetupKey status.
+                  description: OZCondition defines a condition in OZSetupKey status.
                   properties:
                     lastProbeTime:
                       description: Last time we probed the condition.
@@ -242,8 +242,8 @@ metadata:
 spec:
   group: openzro.io
   names:
-    kind: NBResource
-    listKind: NBResourceList
+    kind: OZResource
+    listKind: OZResourceList
     plural: ozresources
     singular: ozresource
   scope: Namespaced
@@ -251,7 +251,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: NBResource is the Schema for the ozresources API.
+        description: OZResource is the Schema for the ozresources API.
         properties:
           apiVersion:
             description: |-
@@ -271,7 +271,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NBResourceSpec defines the desired state of NBResource.
+            description: OZResourceSpec defines the desired state of OZResource.
             properties:
               address:
                 minLength: 1
@@ -308,11 +308,11 @@ spec:
             - networkID
             type: object
           status:
-            description: NBResourceStatus defines the observed state of NBResource.
+            description: OZResourceStatus defines the observed state of OZResource.
             properties:
               conditions:
                 items:
-                  description: NBCondition defines a condition in NBSetupKey status.
+                  description: OZCondition defines a condition in OZSetupKey status.
                   properties:
                     lastProbeTime:
                       description: Last time we probed the condition.
@@ -381,8 +381,8 @@ metadata:
 spec:
   group: openzro.io
   names:
-    kind: NBRoutingPeer
-    listKind: NBRoutingPeerList
+    kind: OZRoutingPeer
+    listKind: OZRoutingPeerList
     plural: ozroutingpeers
     singular: ozroutingpeer
   scope: Namespaced
@@ -390,7 +390,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: NBRoutingPeer is the Schema for the ozroutingpeers API.
+        description: OZRoutingPeer is the Schema for the ozroutingpeers API.
         properties:
           apiVersion:
             description: |-
@@ -410,7 +410,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NBRoutingPeerSpec defines the desired state of NBRoutingPeer.
+            description: OZRoutingPeerSpec defines the desired state of OZRoutingPeer.
             properties:
               annotations:
                 additionalProperties:
@@ -526,11 +526,11 @@ spec:
                 type: array
             type: object
           status:
-            description: NBRoutingPeerStatus defines the observed state of NBRoutingPeer.
+            description: OZRoutingPeerStatus defines the observed state of OZRoutingPeer.
             properties:
               conditions:
                 items:
-                  description: NBCondition defines a condition in NBSetupKey status.
+                  description: OZCondition defines a condition in OZSetupKey status.
                   properties:
                     lastProbeTime:
                       description: Last time we probed the condition.
@@ -587,8 +587,8 @@ metadata:
 spec:
   group: openzro.io
   names:
-    kind: NBSetupKey
-    listKind: NBSetupKeyList
+    kind: OZSetupKey
+    listKind: OZSetupKeyList
     plural: ozsetupkeys
     singular: ozsetupkey
   scope: Namespaced
@@ -596,7 +596,7 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: NBSetupKey is the Schema for the ozsetupkeys API.
+        description: OZSetupKey is the Schema for the ozsetupkeys API.
         properties:
           apiVersion:
             description: |-
@@ -616,7 +616,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: NBSetupKeySpec defines the desired state of NBSetupKey.
+            description: OZSetupKeySpec defines the desired state of OZSetupKey.
             properties:
               managementURL:
                 description: ManagementURL optional, override operator management
@@ -650,11 +650,11 @@ spec:
             - secretKeyRef
             type: object
           status:
-            description: NBSetupKeyStatus defines the observed state of NBSetupKey.
+            description: OZSetupKeyStatus defines the observed state of OZSetupKey.
             properties:
               conditions:
                 items:
-                  description: NBCondition defines a condition in NBSetupKey status.
+                  description: OZCondition defines a condition in OZSetupKey status.
                   properties:
                     lastProbeTime:
                       description: Last time we probed the condition.
@@ -1119,7 +1119,7 @@ spec:
         - -A
         - --cascade=foreground
         - --ignore-not-found
-        - NBRoutingPeer
+        - OZRoutingPeer
       serviceAccountName: openzro-operator
       restartPolicy: Never
 ---
@@ -1159,6 +1159,6 @@ spec:
         - --all
         - --cascade=foreground
         - --ignore-not-found
-        - NBPolicy
+        - OZPolicy
       serviceAccountName: openzro-operator
       restartPolicy: Never

@@ -264,7 +264,7 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyCAInjection).Should(Succeed())
 		})
 
-		Context("NBSetupKey", Ordered, func() {
+		Context("OZSetupKey", Ordered, func() {
 			Describe("Basic functionality", Ordered, func() {
 				BeforeAll(func() {
 					cmd := exec.Command(
@@ -281,7 +281,7 @@ var _ = Describe("Manager", Ordered, func() {
 					cmd := exec.Command("kubectl", "delete", "--ignore-not-found", "secret", "openzro-sk")
 					_, err := utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
-					cmd = exec.Command("kubectl", "delete", "--ignore-not-found", "NBSetupKey", "main")
+					cmd = exec.Command("kubectl", "delete", "--ignore-not-found", "OZSetupKey", "main")
 					_, err = utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
 				})
@@ -290,7 +290,7 @@ var _ = Describe("Manager", Ordered, func() {
 					cmd := exec.Command("kubectl", "apply", "-f", "-")
 					cmd.Stdin = strings.NewReader(`{
 							"apiVersion": "openzro.io/v1",
-							"kind": "NBSetupKey",
+							"kind": "OZSetupKey",
 							"metadata": {
 								"name": "main"
 							},
@@ -373,7 +373,7 @@ var _ = Describe("Manager", Ordered, func() {
 					cmd = exec.Command("kubectl", "apply", "-f", "-")
 					cmd.Stdin = strings.NewReader(`{
 							"apiVersion": "openzro.io/v1",
-							"kind": "NBSetupKey",
+							"kind": "OZSetupKey",
 							"metadata": {
 								"name": "main"
 							},
@@ -394,7 +394,7 @@ var _ = Describe("Manager", Ordered, func() {
 					cmd := exec.Command("kubectl", "delete", "--ignore-not-found", "secret", "openzro-sk")
 					_, err := utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
-					cmd = exec.Command("kubectl", "delete", "--ignore-not-found", "NBSetupKey", "main")
+					cmd = exec.Command("kubectl", "delete", "--ignore-not-found", "OZSetupKey", "main")
 					_, err = utils.Run(cmd)
 					Expect(err).NotTo(HaveOccurred())
 				})

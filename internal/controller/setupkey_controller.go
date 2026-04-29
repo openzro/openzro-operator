@@ -7,8 +7,8 @@ import (
 
 	"github.com/fluxcd/pkg/runtime/conditions"
 	"github.com/fluxcd/pkg/runtime/patch"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 	corev1 "k8s.io/api/core/v1"
 	kerrors "k8s.io/apimachinery/pkg/api/errors"
 	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
@@ -29,7 +29,7 @@ const (
 type SetupKeyReconciler struct {
 	client.Client
 
-	openZro *openzro.Client
+	OpenZro *openzro.Client
 }
 
 // +kubebuilder:rbac:groups=openzro.io,resources=setupkeys,verbs=get;list;watch;create;update;patch;delete
@@ -51,7 +51,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return r.reconcileDelete(ctx, sp, setupKey)
 	}
 
-	autoGroupIDs, err := openzroutil.GetGroupIDs(ctx, r.Client, r.openZro, setupKey.Spec.AutoGroups, setupKey.Namespace)
+	autoGroupIDs, err := openzroutil.GetGroupIDs(ctx, r.Client, r.OpenZro, setupKey.Spec.AutoGroups, setupKey.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -69,7 +69,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		}
 
 		// Check setup key in openZro.
-		resp, err := r.openZro.SetupKeys.Get(ctx, setupKey.Status.SetupKeyID)
+		resp, err := r.OpenZro.SetupKeys.Get(ctx, setupKey.Status.SetupKeyID)
 		if openzro.IsNotFound(err) {
 			return false, nil
 		}
@@ -102,7 +102,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		setupKeyReq := api.PutApiSetupKeysKeyIdJSONRequestBody{
 			AutoGroups: autoGroupIDs,
 		}
-		_, err = r.openZro.SetupKeys.Update(ctx, setupKey.Status.SetupKeyID, setupKeyReq)
+		_, err = r.OpenZro.SetupKeys.Update(ctx, setupKey.Status.SetupKeyID, setupKeyReq)
 		if err != nil {
 			return false, err
 		}
@@ -131,7 +131,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		Type:                "reusable",
 		UsageLimit:          0,
 	}
-	resp, err := r.openZro.SetupKeys.Create(ctx, setupKeyReq)
+	resp, err := r.OpenZro.SetupKeys.Create(ctx, setupKeyReq)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -155,7 +155,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 	// Delete the old status key if we are recreating.
 	if oldSetupKeyID != "" {
-		err = r.openZro.SetupKeys.Delete(ctx, oldSetupKeyID)
+		err = r.OpenZro.SetupKeys.Delete(ctx, oldSetupKeyID)
 		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
@@ -171,7 +171,7 @@ func (r *SetupKeyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 
 func (r *SetupKeyReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, setupKey *ozv1alpha1.SetupKey) (ctrl.Result, error) {
 	if setupKey.Status.SetupKeyID != "" {
-		err := r.openZro.SetupKeys.Delete(ctx, setupKey.Status.SetupKeyID)
+		err := r.OpenZro.SetupKeys.Delete(ctx, setupKey.Status.SetupKeyID)
 		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}

@@ -80,19 +80,19 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return r.hideService(ctx, req, svc, logger)
 }
 
-// hideService deletes NBResource for Service
+// hideService deletes OZResource for Service
 func (r *ServiceReconciler) hideService(ctx context.Context, req ctrl.Request, svc corev1.Service, logger logr.Logger) (ctrl.Result, error) {
-	var nbResource openzrov1.NBResource
+	var nbResource openzrov1.OZResource
 	err := r.Client.Get(ctx, req.NamespacedName, &nbResource)
 	if err != nil && !errors.IsNotFound(err) {
-		logger.Error(errKubernetesAPI, "error getting NBResource", "err", err)
+		logger.Error(errKubernetesAPI, "error getting OZResource", "err", err)
 		return ctrl.Result{}, err
 	}
 
 	if !errors.IsNotFound(err) {
 		err = r.Client.Delete(ctx, &nbResource)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error deleting NBResource", "err", err)
+			logger.Error(errKubernetesAPI, "error deleting OZResource", "err", err)
 			return ctrl.Result{}, err
 		}
 	}
@@ -109,7 +109,7 @@ func (r *ServiceReconciler) hideService(ctx context.Context, req ctrl.Request, s
 	return ctrl.Result{}, nil
 }
 
-// exposeService creates/updates NBResource for Service
+// exposeService creates/updates OZResource for Service
 func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request, svc corev1.Service, logger logr.Logger) (ctrl.Result, error) {
 	routerNamespace := r.ControllerNamespace
 	if r.NamespacedNetworks {
@@ -125,29 +125,29 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 		}
 	}
 
-	var routingPeer openzrov1.NBRoutingPeer
-	// Check if NBRoutingPeer exists
+	var routingPeer openzrov1.OZRoutingPeer
+	// Check if OZRoutingPeer exists
 	err := r.Client.Get(ctx, types.NamespacedName{Namespace: routerNamespace, Name: "router"}, &routingPeer)
 	if err != nil && !errors.IsNotFound(err) {
-		logger.Error(errKubernetesAPI, "error getting NBRoutingPeer", "err", err)
+		logger.Error(errKubernetesAPI, "error getting OZRoutingPeer", "err", err)
 		return ctrl.Result{}, err
 	}
 
-	// Create NBRoutingPeer with default values if not exists
+	// Create OZRoutingPeer with default values if not exists
 	if errors.IsNotFound(err) {
-		routingPeer = openzrov1.NBRoutingPeer{
+		routingPeer = openzrov1.OZRoutingPeer{
 			ObjectMeta: v1.ObjectMeta{
 				Name:       "router",
 				Namespace:  routerNamespace,
 				Finalizers: []string{"openzro.io/cleanup"},
 				Labels:     r.DefaultLabels,
 			},
-			Spec: openzrov1.NBRoutingPeerSpec{},
+			Spec: openzrov1.OZRoutingPeerSpec{},
 		}
 
 		err = r.Client.Create(ctx, &routingPeer)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error creating NBRoutingPeer", "err", err)
+			logger.Error(errKubernetesAPI, "error creating OZRoutingPeer", "err", err)
 			return ctrl.Result{}, err
 		}
 
@@ -161,10 +161,10 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
-	var nbResource openzrov1.NBResource
+	var nbResource openzrov1.OZResource
 	err = r.Client.Get(ctx, req.NamespacedName, &nbResource)
 	if err != nil && !errors.IsNotFound(err) {
-		logger.Error(errKubernetesAPI, "error getting NBResource", "err", err)
+		logger.Error(errKubernetesAPI, "error getting OZResource", "err", err)
 		return ctrl.Result{}, err
 	}
 
@@ -177,13 +177,13 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 	if errors.IsNotFound(err) {
 		err = r.Client.Create(ctx, &nbResource)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error creating NBResource", "err", err)
+			logger.Error(errKubernetesAPI, "error creating OZResource", "err", err)
 			return ctrl.Result{}, err
 		}
 	} else if !originalNBResource.Spec.Equal(nbResource.Spec) {
 		err = r.Client.Update(ctx, &nbResource)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error updating NBResource", "err", err)
+			logger.Error(errKubernetesAPI, "error updating OZResource", "err", err)
 			return ctrl.Result{}, err
 		}
 	}
@@ -191,8 +191,8 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 	return ctrl.Result{}, nil
 }
 
-// reconcileNBResource ensures NBResource settings are in-line with Service definition and annotations
-func (r *ServiceReconciler) reconcileNBResource(nbResource *openzrov1.NBResource, req ctrl.Request, svc corev1.Service, routingPeer openzrov1.NBRoutingPeer, logger logr.Logger) error {
+// reconcileNBResource ensures OZResource settings are in-line with Service definition and annotations
+func (r *ServiceReconciler) reconcileNBResource(nbResource *openzrov1.OZResource, req ctrl.Request, svc corev1.Service, routingPeer openzrov1.OZRoutingPeer, logger logr.Logger) error {
 	groups := []string{fmt.Sprintf("%s-%s-%s", r.ClusterName, req.Namespace, req.Name)}
 	if v, ok := svc.Annotations[serviceGroupsAnnotation]; ok {
 		//nolint:prealloc
@@ -230,7 +230,7 @@ func (r *ServiceReconciler) reconcileNBResource(nbResource *openzrov1.NBResource
 	return nil
 }
 
-func (r *ServiceReconciler) applyPolicy(nbResource *openzrov1.NBResource, svc corev1.Service, logger logr.Logger) error {
+func (r *ServiceReconciler) applyPolicy(nbResource *openzrov1.OZResource, svc corev1.Service, logger logr.Logger) error {
 	nbResource.Spec.PolicyName = svc.Annotations[servicePolicyAnnotation]
 	var filterProtocols []string
 	if v, ok := svc.Annotations[serviceProtocolAnnotation]; ok {

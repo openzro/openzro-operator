@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
+	openzro "github.com/openzro/openzro/management/client/rest"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 

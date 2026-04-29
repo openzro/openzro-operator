@@ -8,8 +8,8 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,11 +19,11 @@ import (
 	"github.com/openzro/openzro-operator/internal/util"
 )
 
-// NBPolicyReconciler reconciles a NBPolicy object
-type NBPolicyReconciler struct {
+// OZPolicyReconciler reconciles a OZPolicy object
+type OZPolicyReconciler struct {
 	client.Client
 
-	openZro *openzro.Client
+	OpenZro *openzro.Client
 }
 
 var (
@@ -38,17 +38,17 @@ const (
 	protocolUDP = "udp"
 )
 
-// getResources get all NBResource objects in policy.status.managedServiceList
-func (r *NBPolicyReconciler) getResources(ctx context.Context, nbPolicy *openzrov1.NBPolicy, logger logr.Logger) ([]openzrov1.NBResource, error) {
-	var resourceList []openzrov1.NBResource
+// getResources get all OZResource objects in policy.status.managedServiceList
+func (r *OZPolicyReconciler) getResources(ctx context.Context, nbPolicy *openzrov1.OZPolicy, logger logr.Logger) ([]openzrov1.OZResource, error) {
+	var resourceList []openzrov1.OZResource
 	var updatedManagedServiceList []string
 	for _, rss := range nbPolicy.Status.ManagedServiceList {
-		var resource openzrov1.NBResource
+		var resource openzrov1.OZResource
 		namespacedName := types.NamespacedName{Namespace: strings.Split(rss, "/")[0], Name: strings.Split(rss, "/")[1]}
 		err := r.Client.Get(ctx, namespacedName, &resource)
 		if err != nil && !errors.IsNotFound(err) {
-			logger.Error(errKubernetesAPI, "Error getting NBResource", "namespace", namespacedName.Namespace, "name", namespacedName.Name)
-			nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("internalError", fmt.Sprintf("Error getting NBResource: %v", err))
+			logger.Error(errKubernetesAPI, "Error getting OZResource", "namespace", namespacedName.Namespace, "name", namespacedName.Name)
+			nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("internalError", fmt.Sprintf("Error getting OZResource: %v", err))
 			return nil, err
 		}
 		if err == nil && resource.DeletionTimestamp == nil {
@@ -62,9 +62,9 @@ func (r *NBPolicyReconciler) getResources(ctx context.Context, nbPolicy *openzro
 	return resourceList, nil
 }
 
-// mapResources map each NBResource ports and protocols into one object to generate the policy
+// mapResources map each OZResource ports and protocols into one object to generate the policy
 // returns map[protocol] => ports, destination group IDs
-func (r *NBPolicyReconciler) mapResources(ctx context.Context, nbPolicy *openzrov1.NBPolicy, resources []openzrov1.NBResource, logger logr.Logger) (map[string][]int32, []string, error) {
+func (r *OZPolicyReconciler) mapResources(ctx context.Context, nbPolicy *openzrov1.OZPolicy, resources []openzrov1.OZResource, logger logr.Logger) (map[string][]int32, []string, error) {
 	portMapping := map[string]map[int32]any{
 		protocolTCP: make(map[int32]any),
 		protocolUDP: make(map[int32]any),
@@ -113,10 +113,10 @@ func (r *NBPolicyReconciler) mapResources(ctx context.Context, nbPolicy *openzro
 }
 
 // createPolicy helper for creating policy with settings
-func (r *NBPolicyReconciler) createPolicy(ctx context.Context, nbPolicy *openzrov1.NBPolicy, protocol string, sourceGroupIDs, destinationGroupIDs, ports []string, logger logr.Logger) (*string, error) {
+func (r *OZPolicyReconciler) createPolicy(ctx context.Context, nbPolicy *openzrov1.OZPolicy, protocol string, sourceGroupIDs, destinationGroupIDs, ports []string, logger logr.Logger) (*string, error) {
 	policyName := fmt.Sprintf("%s %s", nbPolicy.Spec.Name, strings.ToUpper(protocol))
 	logger.Info("Creating openZro Policy", "name", policyName, "description", nbPolicy.Spec.Description, "protocol", protocol, "sources", sourceGroupIDs, "destinations", destinationGroupIDs, "ports", ports, "bidirectional", nbPolicy.Spec.Bidirectional)
-	policy, err := r.openZro.Policies.Create(ctx, api.PostApiPoliciesJSONRequestBody{
+	policy, err := r.OpenZro.Policies.Create(ctx, api.PostApiPoliciesJSONRequestBody{
 		Enabled:     true,
 		Name:        policyName,
 		Description: &nbPolicy.Spec.Description,
@@ -137,7 +137,7 @@ func (r *NBPolicyReconciler) createPolicy(ctx context.Context, nbPolicy *openzro
 
 	if err != nil {
 		logger.Error(erropenZroAPI, "Error creating Policy", "err", err)
-		nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("Error creating policy: %v", err))
+		nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("Error creating policy: %v", err))
 		return nil, err
 	}
 
@@ -145,10 +145,10 @@ func (r *NBPolicyReconciler) createPolicy(ctx context.Context, nbPolicy *openzro
 }
 
 // updatePolicy helper for updating policy with settings
-func (r *NBPolicyReconciler) updatePolicy(ctx context.Context, policyID *string, nbPolicy *openzrov1.NBPolicy, protocol string, sourceGroupIDs, destinationGroupIDs, ports []string, logger logr.Logger) (*string, bool, error) {
+func (r *OZPolicyReconciler) updatePolicy(ctx context.Context, policyID *string, nbPolicy *openzrov1.OZPolicy, protocol string, sourceGroupIDs, destinationGroupIDs, ports []string, logger logr.Logger) (*string, bool, error) {
 	policyName := fmt.Sprintf("%s %s", nbPolicy.Spec.Name, strings.ToUpper(protocol))
 	logger.Info("Updating openZro Policy", "name", policyName, "description", nbPolicy.Spec.Description, "protocol", protocol, "sources", sourceGroupIDs, "destinations", destinationGroupIDs, "ports", ports, "bidirectional", nbPolicy.Spec.Bidirectional)
-	_, err := r.openZro.Policies.Update(ctx, *policyID, api.PutApiPoliciesPolicyIdJSONRequestBody{
+	_, err := r.OpenZro.Policies.Update(ctx, *policyID, api.PutApiPoliciesPolicyIdJSONRequestBody{
 		Enabled:     true,
 		Name:        policyName,
 		Description: &nbPolicy.Spec.Description,
@@ -169,7 +169,7 @@ func (r *NBPolicyReconciler) updatePolicy(ctx context.Context, policyID *string,
 
 	if err != nil && !strings.Contains(err.Error(), "not found") {
 		logger.Error(erropenZroAPI, "Error updating Policy", "err", err)
-		nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("Error updating policy: %v", err))
+		nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("Error updating policy: %v", err))
 		return policyID, false, err
 	}
 
@@ -179,7 +179,7 @@ func (r *NBPolicyReconciler) updatePolicy(ctx context.Context, policyID *string,
 		logger.Info("Policy deleted from openZro API, recreating", "protocol", protocol)
 		policyID = nil
 		requeue = true
-		nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("Gone", "Policy deleted from openZro API")
+		nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("Gone", "Policy deleted from openZro API")
 	} else if err != nil {
 		return nil, false, err
 	}
@@ -189,18 +189,18 @@ func (r *NBPolicyReconciler) updatePolicy(ctx context.Context, policyID *string,
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-func (r *NBPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	logger := ctrl.Log.WithName("NBPolicy").WithValues("namespace", req.Namespace, "name", req.Name)
-	logger.Info("Reconciling NBPolicy")
+func (r *OZPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
+	logger := ctrl.Log.WithName("OZPolicy").WithValues("namespace", req.Namespace, "name", req.Name)
+	logger.Info("Reconciling OZPolicy")
 
-	var nbPolicy openzrov1.NBPolicy
+	var nbPolicy openzrov1.OZPolicy
 	err = r.Client.Get(ctx, req.NamespacedName, &nbPolicy)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			err = nil
 		}
 		if err != nil {
-			logger.Error(errKubernetesAPI, "error getting NBPolicy", "err", err)
+			logger.Error(errKubernetesAPI, "error getting OZPolicy", "err", err)
 		}
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, err
 	}
@@ -247,7 +247,7 @@ func (r *NBPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 
 	sourceGroupIDs, err := r.groupNamesToIDs(ctx, nbPolicy.Spec.SourceGroups, logger)
 	if err != nil {
-		nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("Error getting group IDs: %v", err))
+		nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("Error getting group IDs: %v", err))
 		return ctrl.Result{}, err
 	}
 
@@ -257,13 +257,13 @@ func (r *NBPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (r
 		return ctrl.Result{Requeue: requeue}, err
 	}
 
-	nbPolicy.Status.Conditions = openzrov1.NBConditionTrue()
+	nbPolicy.Status.Conditions = openzrov1.OZConditionTrue()
 
 	return ctrl.Result{}, nil
 }
 
 // syncPolicy ensure upstream policy is up-to-date
-func (r *NBPolicyReconciler) syncPolicy(ctx context.Context, nbPolicy *openzrov1.NBPolicy, sourceGroups, destGroups []string, portMapping map[string][]int32, logger logr.Logger) (bool, error) {
+func (r *OZPolicyReconciler) syncPolicy(ctx context.Context, nbPolicy *openzrov1.OZPolicy, sourceGroups, destGroups []string, portMapping map[string][]int32, logger logr.Logger) (bool, error) {
 	requeue := false
 
 	for protocol, ports := range portMapping {
@@ -275,22 +275,22 @@ func (r *NBPolicyReconciler) syncPolicy(ctx context.Context, nbPolicy *openzrov1
 			policyID = nbPolicy.Status.UDPPolicyID
 		default:
 			logger.Error(errKubernetesAPI, "Unknown protocol", "protocol", protocol)
-			nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("ConfigError", fmt.Sprintf("Unknown protocol: %s", protocol))
+			nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("ConfigError", fmt.Sprintf("Unknown protocol: %s", protocol))
 			return requeue, errUnknownProtocol
 		}
 
 		if len(nbPolicy.Spec.Protocols) > 0 && !slices.Contains(nbPolicy.Spec.Protocols, protocol) {
 			if policyID != nil {
-				logger.Info("Deleting protocol policy as NBPolicy has restricted protocols", "protocol", protocol)
-				err := r.openZro.Policies.Delete(ctx, *policyID)
+				logger.Info("Deleting protocol policy as OZPolicy has restricted protocols", "protocol", protocol)
+				err := r.OpenZro.Policies.Delete(ctx, *policyID)
 				if err != nil && !strings.Contains(err.Error(), "not found") {
-					nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("Error deleting policy: %v", err))
+					nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("Error deleting policy: %v", err))
 					return requeue, err
 				}
 				policyID = nil
 
 			} else {
-				logger.Info("Ignoring protocol as NBPolicy has restricted protocols", "protocol", protocol)
+				logger.Info("Ignoring protocol as OZPolicy has restricted protocols", "protocol", protocol)
 			}
 		} else if len(ports) == 0 && policyID == nil {
 			logger.Info("0 ports found for protocol in policy", "protocol", protocol)
@@ -304,9 +304,9 @@ func (r *NBPolicyReconciler) syncPolicy(ctx context.Context, nbPolicy *openzrov1
 		} else if len(ports) == 0 || len(destGroups) == 0 || len(sourceGroups) == 0 {
 			// Delete policy
 			logger.Info("Deleting policy", "protocol", protocol)
-			err := r.openZro.Policies.Delete(ctx, *policyID)
+			err := r.OpenZro.Policies.Delete(ctx, *policyID)
 			if err != nil && !strings.Contains(err.Error(), "not found") {
-				nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("APIError", fmt.Sprintf("Error deleting policy: %v", err))
+				nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("APIError", fmt.Sprintf("Error deleting policy: %v", err))
 				return requeue, err
 			}
 			policyID = nil
@@ -337,7 +337,7 @@ func (r *NBPolicyReconciler) syncPolicy(ctx context.Context, nbPolicy *openzrov1
 			nbPolicy.Status.UDPPolicyID = policyID
 		default:
 			logger.Error(errKubernetesAPI, "Unknown protocol", "protocol", protocol)
-			nbPolicy.Status.Conditions = openzrov1.NBConditionFalse("ConfigError", fmt.Sprintf("Unknown protocol: %s", protocol))
+			nbPolicy.Status.Conditions = openzrov1.OZConditionFalse("ConfigError", fmt.Sprintf("Unknown protocol: %s", protocol))
 			return requeue, errUnknownProtocol
 		}
 	}
@@ -345,16 +345,16 @@ func (r *NBPolicyReconciler) syncPolicy(ctx context.Context, nbPolicy *openzrov1
 	return requeue, nil
 }
 
-func (r *NBPolicyReconciler) handleDelete(ctx context.Context, nbPolicy *openzrov1.NBPolicy, logger logr.Logger) error {
+func (r *OZPolicyReconciler) handleDelete(ctx context.Context, nbPolicy *openzrov1.OZPolicy, logger logr.Logger) error {
 	if nbPolicy.Status.TCPPolicyID != nil {
-		err := r.openZro.Policies.Delete(ctx, *nbPolicy.Status.TCPPolicyID)
+		err := r.OpenZro.Policies.Delete(ctx, *nbPolicy.Status.TCPPolicyID)
 		if err != nil && !strings.Contains("not found", err.Error()) {
 			return err
 		}
 		nbPolicy.Status.TCPPolicyID = nil
 	}
 	if nbPolicy.Status.UDPPolicyID != nil {
-		err := r.openZro.Policies.Delete(ctx, *nbPolicy.Status.UDPPolicyID)
+		err := r.OpenZro.Policies.Delete(ctx, *nbPolicy.Status.UDPPolicyID)
 		if err != nil && !strings.Contains("not found", err.Error()) {
 			return err
 		}
@@ -364,7 +364,7 @@ func (r *NBPolicyReconciler) handleDelete(ctx context.Context, nbPolicy *openzro
 		nbPolicy.Finalizers = util.Without(nbPolicy.Finalizers, "openzro.io/cleanup")
 		err := r.Client.Update(ctx, nbPolicy)
 		if err != nil {
-			logger.Error(errKubernetesAPI, "Error updating NBPolicy", "err", err)
+			logger.Error(errKubernetesAPI, "Error updating OZPolicy", "err", err)
 			return err
 		}
 	}
@@ -372,8 +372,8 @@ func (r *NBPolicyReconciler) handleDelete(ctx context.Context, nbPolicy *openzro
 }
 
 // groupNamesToIDs map list of openZro group names to group IDs
-func (r *NBPolicyReconciler) groupNamesToIDs(ctx context.Context, groupNames []string, logger logr.Logger) ([]string, error) {
-	groups, err := r.openZro.Groups.List(ctx)
+func (r *OZPolicyReconciler) groupNamesToIDs(ctx context.Context, groupNames []string, logger logr.Logger) ([]string, error) {
+	groups, err := r.OpenZro.Groups.List(ctx)
 	if err != nil {
 		logger.Error(erropenZroAPI, "Error listing Groups", "err", err)
 		return nil, err
@@ -393,9 +393,9 @@ func (r *NBPolicyReconciler) groupNamesToIDs(ctx context.Context, groupNames []s
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *NBPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *OZPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&openzrov1.NBPolicy{}).
+		For(&openzrov1.OZPolicy{}).
 		Named("ozpolicy").
 		Complete(r)
 }

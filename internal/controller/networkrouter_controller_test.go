@@ -15,7 +15,7 @@ import (
 
 	ozv1alpha1 "github.com/openzro/openzro-operator/api/v1alpha1"
 	"github.com/openzro/openzro-operator/internal/openzromock"
-	"github.com/openzro/openzro/shared/management/http/api"
+	"github.com/openzro/openzro/management/server/http/api"
 )
 
 var _ = Describe("NetworkRouter Controller", func() {
@@ -35,17 +35,17 @@ var _ = Describe("NetworkRouter Controller", func() {
 			nbClient := openzromock.Client()
 			netRouterRec = &NetworkRouterReconciler{
 				Client:        k8sClient,
-				openZro:       nbClient,
+				OpenZro:       nbClient,
 				ClientImage:   "docker.io/openzro/openzro:latest",
 				ManagementURL: "https://openzro.io",
 			}
 			setupKeyRec = &SetupKeyReconciler{
 				Client:  k8sClient,
-				openZro: nbClient,
+				OpenZro: nbClient,
 			}
 			groupRec = &GroupReconciler{
 				Client:  k8sClient,
-				openZro: nbClient,
+				OpenZro: nbClient,
 			}
 
 			ns := &corev1.Namespace{
@@ -75,7 +75,7 @@ var _ = Describe("NetworkRouter Controller", func() {
 				Name:   "cluster.local",
 				Domain: "cluster.local",
 			}
-			_, err := netRouterRec.openZro.DNSZones.CreateZone(ctx, zoneReq)
+			_, err := netRouterRec.OpenZro.DNSZones.CreateZone(ctx, zoneReq)
 			Expect(err).ToNot(HaveOccurred())
 
 			netRouter := &ozv1alpha1.NetworkRouter{
@@ -124,7 +124,7 @@ var _ = Describe("NetworkRouter Controller", func() {
 			err = k8sClient.Get(ctx, nn, netRouter)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(netRouter.Status.NetworkID).ToNot(BeEmpty())
-			_, err = netRouterRec.openZro.Networks.Routers(netRouter.Status.NetworkID).Get(ctx, netRouter.Status.RoutingPeerID)
+			_, err = netRouterRec.OpenZro.Networks.Routers(netRouter.Status.NetworkID).Get(ctx, netRouter.Status.RoutingPeerID)
 			Expect(err).NotTo(HaveOccurred())
 
 			err = k8sClient.Get(ctx, client.ObjectKeyFromObject(group), group)
@@ -139,7 +139,7 @@ var _ = Describe("NetworkRouter Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			Expect(dep.OwnerReferences[0].UID).To(Equal(netRouter.UID))
 
-			routingPeerResp, err := netRouterRec.openZro.Networks.Routers(netRouter.Status.NetworkID).Get(ctx, netRouter.Status.RoutingPeerID)
+			routingPeerResp, err := netRouterRec.OpenZro.Networks.Routers(netRouter.Status.NetworkID).Get(ctx, netRouter.Status.RoutingPeerID)
 			Expect(err).NotTo(HaveOccurred())
 			Expect((*routingPeerResp.PeerGroups)[0]).To(Equal(group.Status.GroupID))
 		})

@@ -12,8 +12,8 @@ import (
 	"github.com/fluxcd/pkg/runtime/patch"
 	"github.com/openzro/openzro-operator/internal/k8sutil"
 	"github.com/openzro/openzro-operator/internal/openzroutil"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -33,7 +33,7 @@ import (
 type NetworkRouterReconciler struct {
 	client.Client
 
-	openZro       *openzro.Client
+	OpenZro       *openzro.Client
 	ManagementURL string
 	ClientImage   string
 }
@@ -61,7 +61,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 	}
 
 	// Ensure the DNS Zone exists.
-	_, err = openzroutil.GetDNSZoneByName(ctx, r.openZro, netRouter.Spec.DNSZoneRef.Name)
+	_, err = openzroutil.GetDNSZoneByName(ctx, r.OpenZro, netRouter.Spec.DNSZoneRef.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -73,7 +73,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			Name: netRouter.Name,
 		}
 		if netRouter.Status.NetworkID != "" {
-			networkResp, err := r.openZro.Networks.Update(ctx, netRouter.Status.NetworkID, networkReq)
+			networkResp, err := r.OpenZro.Networks.Update(ctx, netRouter.Status.NetworkID, networkReq)
 			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
@@ -81,7 +81,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				return networkResp.Id, nil
 			}
 		}
-		networkResp, err := r.openZro.Networks.Create(ctx, networkReq)
+		networkResp, err := r.OpenZro.Networks.Create(ctx, networkReq)
 		if err != nil {
 			return "", err
 		}
@@ -161,7 +161,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 			PeerGroups: ptr.To([]string{group.Status.GroupID}),
 		}
 		if netRouter.Status.RoutingPeerID != "" {
-			resp, err := r.openZro.Networks.Routers(networkID).Update(ctx, netRouter.Status.RoutingPeerID, routerReq)
+			resp, err := r.OpenZro.Networks.Routers(networkID).Update(ctx, netRouter.Status.RoutingPeerID, routerReq)
 			if err != nil && !openzro.IsNotFound(err) {
 				return "", err
 			}
@@ -169,7 +169,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 				return resp.Id, nil
 			}
 		}
-		resp, err := r.openZro.Networks.Routers(networkID).Create(ctx, routerReq)
+		resp, err := r.OpenZro.Networks.Routers(networkID).Create(ctx, routerReq)
 		if err != nil {
 			return "", err
 		}
@@ -292,13 +292,13 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 func (r *NetworkRouterReconciler) reconcileDelete(ctx context.Context, sp *patch.SerialPatcher, netRouter *ozv1alpha1.NetworkRouter) (ctrl.Result, error) {
 	if netRouter.Status.RoutingPeerID != "" {
-		err := r.openZro.Networks.Routers(netRouter.Status.NetworkID).Delete(ctx, netRouter.Status.RoutingPeerID)
+		err := r.OpenZro.Networks.Routers(netRouter.Status.NetworkID).Delete(ctx, netRouter.Status.RoutingPeerID)
 		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}
 	}
 	if netRouter.Status.NetworkID != "" {
-		err := r.openZro.Networks.Delete(ctx, netRouter.Status.NetworkID)
+		err := r.OpenZro.Networks.Delete(ctx, netRouter.Status.NetworkID)
 		if err != nil && !openzro.IsNotFound(err) {
 			return ctrl.Result{}, err
 		}

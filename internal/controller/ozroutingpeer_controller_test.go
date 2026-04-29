@@ -21,11 +21,11 @@ import (
 
 	openzrov1 "github.com/openzro/openzro-operator/api/v1"
 	"github.com/openzro/openzro-operator/internal/util"
-	openzro "github.com/openzro/openzro/shared/management/client/rest"
-	"github.com/openzro/openzro/shared/management/http/api"
+	openzro "github.com/openzro/openzro/management/client/rest"
+	"github.com/openzro/openzro/management/server/http/api"
 )
 
-var _ = Describe("NBRoutingPeer Controller", func() {
+var _ = Describe("OZRoutingPeer Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
 
@@ -35,36 +35,36 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 			Name:      resourceName,
 			Namespace: "default",
 		}
-		ozroutingpeer := &openzrov1.NBRoutingPeer{}
+		ozroutingpeer := &openzrov1.OZRoutingPeer{}
 		var openzroClient *openzro.Client
 		var mux *http.ServeMux
 		var server *httptest.Server
-		var controllerReconciler *NBRoutingPeerReconciler
+		var controllerReconciler *OZRoutingPeerReconciler
 
 		BeforeEach(func() {
 			ctrl.SetLogger(logr.New(GinkgoLogr.GetSink()))
 			mux = &http.ServeMux{}
 			server = httptest.NewServer(mux)
 			openzroClient = openzro.New(server.URL, "ABC")
-			controllerReconciler = &NBRoutingPeerReconciler{
+			controllerReconciler = &OZRoutingPeerReconciler{
 				Client:             k8sClient,
-				openZro:            openzroClient,
+				OpenZro:            openzroClient,
 				ClientImage:        "openzro/openzro:latest",
 				ClusterName:        "kubernetes",
 				DefaultLabels:      make(map[string]string),
 				NamespacedNetworks: false,
 			}
 
-			By("creating the custom resource for the Kind NBRoutingPeer")
+			By("creating the custom resource for the Kind OZRoutingPeer")
 			err := k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)
 			if err != nil && errors.IsNotFound(err) {
-				ozroutingpeer = &openzrov1.NBRoutingPeer{
+				ozroutingpeer = &openzrov1.OZRoutingPeer{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:       resourceName,
 						Namespace:  "default",
 						Finalizers: []string{"openzro.io/cleanup"},
 					},
-					Spec: openzrov1.NBRoutingPeerSpec{
+					Spec: openzrov1.OZRoutingPeerSpec{
 						Replicas: util.Ptr(int32(0)),
 					},
 				}
@@ -73,7 +73,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 		})
 
 		AfterEach(func() {
-			resource := &openzrov1.NBRoutingPeer{}
+			resource := &openzrov1.OZRoutingPeer{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
@@ -89,7 +89,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 				}
 			}
 
-			group := &openzrov1.NBGroup{}
+			group := &openzrov1.OZGroup{}
 			err = k8sClient.Get(ctx, typeNamespacedName, group)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
@@ -137,7 +137,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 				}
 			}
 
-			ozresource := &openzrov1.NBResource{}
+			ozresource := &openzrov1.OZResource{}
 			err = k8sClient.Get(ctx, typeNamespacedName, ozresource)
 			if !errors.IsNotFound(err) {
 				Expect(err).NotTo(HaveOccurred())
@@ -156,12 +156,12 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 
 		When("Network doesn't exist", func() {
 			BeforeEach(func() {
-				group := &openzrov1.NBGroup{
+				group := &openzrov1.OZGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      typeNamespacedName.Name,
 						Namespace: typeNamespacedName.Namespace,
 					},
-					Spec: openzrov1.NBGroupSpec{
+					Spec: openzrov1.OZGroupSpec{
 						Name: controllerReconciler.ClusterName,
 					},
 				}
@@ -230,12 +230,12 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 			})
 			Describe("Network Router changes", func() {
 				BeforeEach(func() {
-					group := &openzrov1.NBGroup{
+					group := &openzrov1.OZGroup{
 						ObjectMeta: metav1.ObjectMeta{
 							Name:      typeNamespacedName.Name,
 							Namespace: typeNamespacedName.Namespace,
 						},
-						Spec: openzrov1.NBGroupSpec{
+						Spec: openzrov1.OZGroupSpec{
 							Name: controllerReconciler.ClusterName,
 						},
 					}
@@ -445,7 +445,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 						Expect(err).NotTo(HaveOccurred())
 						Expect(res.RequeueAfter).To(BeNumerically(">", 0))
 
-						group := &openzrov1.NBGroup{}
+						group := &openzrov1.OZGroup{}
 						Expect(k8sClient.Get(ctx, typeNamespacedName, group)).To(Succeed())
 						Expect(group.Spec.Name).To(Equal(controllerReconciler.ClusterName))
 						Expect(group.Labels).To(HaveKeyWithValue("dog", "bark"))
@@ -461,13 +461,13 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 				})
 				When("Group exists", func() {
 					BeforeEach(func() {
-						group := &openzrov1.NBGroup{
+						group := &openzrov1.OZGroup{
 							ObjectMeta: metav1.ObjectMeta{
 								Name:       typeNamespacedName.Name,
 								Namespace:  typeNamespacedName.Namespace,
 								Finalizers: []string{"openzro.io/routing-peer-cleanup", "openzro.io/group-cleanup"},
 							},
-							Spec: openzrov1.NBGroupSpec{
+							Spec: openzrov1.OZGroupSpec{
 								Name: controllerReconciler.ClusterName,
 							},
 						}
@@ -1053,7 +1053,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 							})
 						})
 					})
-					When("NBRoutingPeer is set for deletion", func() {
+					When("OZRoutingPeer is set for deletion", func() {
 						networkDeleted := false
 						BeforeEach(func() {
 							networkDeleted = false
@@ -1096,13 +1096,13 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 							})
 						})
 
-						It("should remove finalizer from NBGroup", func() {
+						It("should remove finalizer from OZGroup", func() {
 							Expect(k8sClient.Delete(ctx, ozroutingpeer)).To(Succeed())
 							_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							group := &openzrov1.NBGroup{}
+							group := &openzrov1.OZGroup{}
 							Expect(k8sClient.Get(ctx, typeNamespacedName, group)).To(Succeed())
 							Expect(group.Finalizers).NotTo(ContainElement("openzro.io/routing-peer-cleanup"))
 						})
@@ -1136,13 +1136,13 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 							Expect(errors.IsNotFound(err)).To(BeTrue())
 						})
 
-						It("should delete any hanging NBResources", func() {
-							nbResource := &openzrov1.NBResource{
+						It("should delete any hanging OZResources", func() {
+							nbResource := &openzrov1.OZResource{
 								ObjectMeta: metav1.ObjectMeta{
 									Name:      typeNamespacedName.Name,
 									Namespace: typeNamespacedName.Namespace,
 								},
-								Spec: openzrov1.NBResourceSpec{
+								Spec: openzrov1.OZResourceSpec{
 									Name:      "test",
 									NetworkID: *ozroutingpeer.Status.NetworkID,
 									Address:   "test",
@@ -1155,7 +1155,7 @@ var _ = Describe("NBRoutingPeer Controller", func() {
 								NamespacedName: typeNamespacedName,
 							})
 							Expect(err).NotTo(HaveOccurred())
-							nbResource = &openzrov1.NBResource{}
+							nbResource = &openzrov1.OZResource{}
 							err = k8sClient.Get(ctx, typeNamespacedName, nbResource)
 							Expect(errors.IsNotFound(err)).To(BeTrue())
 						})
