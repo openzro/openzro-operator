@@ -55,6 +55,20 @@ var _ = Describe("OZRoutingPeer Controller", func() {
 				NamespacedNetworks: false,
 			}
 
+			// Default Accounts mock so handleAdmissionExempt
+			// (called on every successful Reconcile) doesn't 404.
+			// Tests that exercise admission-exempt behavior can
+			// override this with mux.HandleFunc.
+			mux.HandleFunc("/api/accounts", func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewEncoder(w).Encode([]api.Account{{
+					Id:       "test-account",
+					Settings: api.AccountSettings{AdmissionExemptGroups: util.Ptr([]string{})},
+				}})
+			})
+			mux.HandleFunc("/api/accounts/test-account", func(w http.ResponseWriter, r *http.Request) {
+				_ = json.NewEncoder(w).Encode(api.Account{Id: "test-account"})
+			})
+
 			By("creating the custom resource for the Kind OZRoutingPeer")
 			err := k8sClient.Get(ctx, typeNamespacedName, ozroutingpeer)
 			if err != nil && errors.IsNotFound(err) {
@@ -490,7 +504,7 @@ var _ = Describe("OZRoutingPeer Controller", func() {
 										Expect(err).NotTo(HaveOccurred())
 										Expect(json.Unmarshal(bs, &req)).To(Succeed())
 										Expect(req.AutoGroups).To(ConsistOf([]string{"test"}))
-										Expect(req.Ephemeral).To(BeEquivalentTo(util.Ptr(true)))
+										Expect(req.Ephemeral).To(BeEquivalentTo(util.Ptr(false)))
 										Expect(req.ExpiresIn).To(BeZero())
 										Expect(req.Name).To(Equal(controllerReconciler.ClusterName))
 										Expect(req.Type).To(Equal("reusable"))
@@ -533,7 +547,7 @@ var _ = Describe("OZRoutingPeer Controller", func() {
 										Expect(err).NotTo(HaveOccurred())
 										Expect(json.Unmarshal(bs, &req)).To(Succeed())
 										Expect(req.AutoGroups).To(ConsistOf([]string{"test"}))
-										Expect(req.Ephemeral).To(BeEquivalentTo(util.Ptr(true)))
+										Expect(req.Ephemeral).To(BeEquivalentTo(util.Ptr(false)))
 										Expect(req.ExpiresIn).To(BeZero())
 										Expect(req.Name).To(Equal(controllerReconciler.ClusterName))
 										Expect(req.Type).To(Equal("reusable"))
@@ -607,7 +621,7 @@ var _ = Describe("OZRoutingPeer Controller", func() {
 										Expect(err).NotTo(HaveOccurred())
 										Expect(json.Unmarshal(bs, &req)).To(Succeed())
 										Expect(req.AutoGroups).To(ConsistOf([]string{"test"}))
-										Expect(req.Ephemeral).To(BeEquivalentTo(util.Ptr(true)))
+										Expect(req.Ephemeral).To(BeEquivalentTo(util.Ptr(false)))
 										Expect(req.ExpiresIn).To(BeZero())
 										Expect(req.Name).To(Equal(controllerReconciler.ClusterName))
 										Expect(req.Type).To(Equal("reusable"))
@@ -692,7 +706,7 @@ var _ = Describe("OZRoutingPeer Controller", func() {
 										Expect(err).NotTo(HaveOccurred())
 										Expect(json.Unmarshal(bs, &req)).To(Succeed())
 										Expect(req.AutoGroups).To(ConsistOf([]string{"test"}))
-										Expect(req.Ephemeral).To(BeEquivalentTo(util.Ptr(true)))
+										Expect(req.Ephemeral).To(BeEquivalentTo(util.Ptr(false)))
 										Expect(req.ExpiresIn).To(BeZero())
 										Expect(req.Name).To(Equal(controllerReconciler.ClusterName))
 										Expect(req.Type).To(Equal("reusable"))

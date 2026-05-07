@@ -26,6 +26,26 @@ type OZRoutingPeerSpec struct {
 	VolumeMounts []corev1.VolumeMount `json:"volumeMounts"`
 	// +optional
 	Privileged *bool `json:"privileged,omitempty"`
+	// Ephemeral sets the SetupKey Ephemeral flag for the peer
+	// registration in openZro. Default: false. Set to true ONLY if
+	// you accept that peers get cleaned up 10 min after any
+	// disconnect (transient gRPC blips count) — appropriate for
+	// short-lived workloads. For typical long-lived routing peer
+	// pods, leave at false: pod restarts produce stale peer entries
+	// that the operator GC's at OZRoutingPeer delete time, but the
+	// running peer survives transient blips.
+	// +optional
+	Ephemeral *bool `json:"ephemeral,omitempty"`
+	// ExemptFromAdmission adds this peer's auto-group to the
+	// account's AdmissionExemptGroups so the routing peer pods
+	// bypass any posture-check based admission gate. Default: true.
+	// Routing peers are headless server-side workloads (cloud VMs,
+	// K8s pods) that cannot run MDM/EDR agents, so the admission
+	// posture check would otherwise lock the routing infrastructure
+	// out of its own mesh. Set to false ONLY if you have a
+	// posture-check that is meaningful for headless gateway peers.
+	// +optional
+	ExemptFromAdmission *bool `json:"exemptFromAdmission,omitempty"`
 }
 
 // OZRoutingPeerStatus defines the observed state of OZRoutingPeer.

@@ -103,6 +103,12 @@ func (r *OZRoutingPeerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 		return ctrl.Result{}, err
 	}
 
+	logger.Info("OZRoutingPeer: Checking admission exempt")
+	err = r.handleAdmissionExempt(ctx, ozrp, *nbGroup, logger)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	logger.Info("OZRoutingPeer: Checking deployment")
 	err = r.handleDeployment(ctx, req, ozrp, logger)
 	if err != nil {
@@ -111,6 +117,108 @@ func (r *OZRoutingPeerReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	ozrp.Status.Conditions = openzrov1.OZConditionTrue()
 	return ctrl.Result{}, nil
+}
+
+// handleAdmissionExempt ensures this OZRoutingPeer's auto-group is in
+// (or out of) the account's AdmissionExemptGroups list, so admission
+// posture-check enforcement doesn't lock the routing peer pods out of
+// the mesh. Default exempt=true: routing peers are headless server-side
+// workloads that cannot run MDM/EDR agents.
+//
+// Idempotent: only PUTs the account when the desired set != current
+// set, to keep the activity log clean.
+func (r *OZRoutingPeerReconciler) handleAdmissionExempt(ctx context.Context, ozrp *openzrov1.OZRoutingPeer, nbGroup openzrov1.OZGroup, logger logr.Logger) error {
+	if nbGroup.Status.GroupID == nil {
+		return nil
+	}
+	exempt := true
+	if ozrp.Spec.ExemptFromAdmission != nil {
+		exempt = *ozrp.Spec.ExemptFromAdmission
+	}
+
+	accounts, err := r.OpenZro.Accounts.List(ctx)
+	if err != nil {
+		logger.Error(erropenZroAPI, "error listing accounts", "err", err)
+		return err
+	}
+	if len(accounts) == 0 {
+		return nil
+	}
+	account := accounts[0]
+	current := []string{}
+	if account.Settings.AdmissionExemptGroups != nil {
+		current = *account.Settings.AdmissionExemptGroups
+	}
+
+	groupID := *nbGroup.Status.GroupID
+	contains := slices.Contains(current, groupID)
+
+	var desired []string
+	switch {
+	case exempt && !contains:
+		desired = append(append([]string{}, current...), groupID)
+	case !exempt && contains:
+		// User flipped the flag from true to false. Pull our group
+		// out — but only ours; preserve manually-added groups.
+		desired = make([]string, 0, len(current))
+		for _, g := range current {
+			if g != groupID {
+				desired = append(desired, g)
+			}
+		}
+	default:
+		// Already in desired state.
+		return nil
+	}
+
+	newSettings := account.Settings
+	newSettings.AdmissionExemptGroups = &desired
+	_, err = r.OpenZro.Accounts.Update(ctx, account.Id, api.AccountRequest{Settings: newSettings})
+	if err != nil {
+		logger.Error(erropenZroAPI, "error updating AdmissionExemptGroups", "err", err)
+		return err
+	}
+	logger.Info("AdmissionExemptGroups reconciled", "groupID", groupID, "exempt", exempt)
+	return nil
+}
+
+// removeAdmissionExempt drops a single group ID from the account's
+// AdmissionExemptGroups. Used in handleDelete so the cleanup of an
+// OZRoutingPeer also cleans up the exempt-list entry it added.
+// Manually-added groups (or groups belonging to other still-existing
+// OZRoutingPeers) are preserved.
+func (r *OZRoutingPeerReconciler) removeAdmissionExempt(ctx context.Context, groupID string, logger logr.Logger) error {
+	accounts, err := r.OpenZro.Accounts.List(ctx)
+	if err != nil {
+		logger.Error(erropenZroAPI, "error listing accounts", "err", err)
+		return err
+	}
+	if len(accounts) == 0 {
+		return nil
+	}
+	account := accounts[0]
+	if account.Settings.AdmissionExemptGroups == nil {
+		return nil
+	}
+	current := *account.Settings.AdmissionExemptGroups
+	if !slices.Contains(current, groupID) {
+		return nil
+	}
+	desired := make([]string, 0, len(current))
+	for _, g := range current {
+		if g != groupID {
+			desired = append(desired, g)
+		}
+	}
+	newSettings := account.Settings
+	newSettings.AdmissionExemptGroups = &desired
+	_, err = r.OpenZro.Accounts.Update(ctx, account.Id, api.AccountRequest{Settings: newSettings})
+	if err != nil {
+		logger.Error(erropenZroAPI, "error removing from AdmissionExemptGroups", "err", err)
+		return err
+	}
+	logger.Info("AdmissionExemptGroups: removed group on delete", "groupID", groupID)
+	return nil
 }
 
 // handleDeployment reconcile routing peer Deployment
@@ -339,10 +447,18 @@ func (r *OZRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 
 	// Check if setup key exists
 	if ozrp.Status.SetupKeyID == nil {
-		// Create new setup key with group Status.GroupID
+		// Create new setup key with group Status.GroupID. Default
+		// Ephemeral=false so transient gRPC blips don't cause the
+		// management to delete the peer 10 minutes after disconnect
+		// — that bug looks like "routing peers disappear" from the
+		// dashboard while the K8s pods are still running fine.
+		ephemeral := false
+		if ozrp.Spec.Ephemeral != nil {
+			ephemeral = *ozrp.Spec.Ephemeral
+		}
 		setupKey, err := r.OpenZro.SetupKeys.Create(ctx, api.CreateSetupKeyRequest{
 			AutoGroups: []string{*nbGroup.Status.GroupID},
-			Ephemeral:  util.Ptr(true),
+			Ephemeral:  util.Ptr(ephemeral),
 			Name:       networkName,
 			Type:       "reusable",
 		})
@@ -622,6 +738,12 @@ func (r *OZRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Req
 		err = r.Client.Update(ctx, &nbGroup)
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error deleting OZGroup", "err", err)
+			return ctrl.Result{}, err
+		}
+	}
+
+	if nbGroup.Status.GroupID != nil {
+		if err := r.removeAdmissionExempt(ctx, *nbGroup.Status.GroupID, logger); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
