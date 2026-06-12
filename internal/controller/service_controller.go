@@ -64,7 +64,7 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Special case for kubernetes API Service
 	// Handled by Helm chart
-	if svc.Namespace == "default" && svc.Name == "kubernetes" {
+	if svc.Namespace == KubernetesDefaultNamespace && svc.Name == KubernetesAPIServiceName {
 		return ctrl.Result{}, nil
 	}
 
@@ -97,8 +97,8 @@ func (r *ServiceReconciler) hideService(ctx context.Context, req ctrl.Request, s
 		}
 	}
 
-	if slices.Contains(svc.Finalizers, "openzro.io/cleanup") {
-		svc.Finalizers = util.Without(svc.Finalizers, "openzro.io/cleanup")
+	if slices.Contains(svc.Finalizers, FinalizerResourceCleanup) {
+		svc.Finalizers = util.Without(svc.Finalizers, FinalizerResourceCleanup)
 		err := r.Client.Update(ctx, &svc)
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error updating Service", "err", err)
@@ -116,8 +116,8 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 		routerNamespace = req.Namespace
 	}
 
-	if !slices.Contains(svc.Finalizers, "openzro.io/cleanup") {
-		svc.Finalizers = append(svc.Finalizers, "openzro.io/cleanup")
+	if !slices.Contains(svc.Finalizers, FinalizerResourceCleanup) {
+		svc.Finalizers = append(svc.Finalizers, FinalizerResourceCleanup)
 		err := r.Client.Update(ctx, &svc)
 		if err != nil {
 			logger.Error(errKubernetesAPI, "error updating Service", "err", err)
@@ -127,7 +127,7 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 
 	var routingPeer openzrov1.OZRoutingPeer
 	// Check if OZRoutingPeer exists
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: routerNamespace, Name: "router"}, &routingPeer)
+	err := r.Client.Get(ctx, types.NamespacedName{Namespace: routerNamespace, Name: DefaultRouterName}, &routingPeer)
 	if err != nil && !errors.IsNotFound(err) {
 		logger.Error(errKubernetesAPI, "error getting OZRoutingPeer", "err", err)
 		return ctrl.Result{}, err
@@ -137,9 +137,9 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 	if errors.IsNotFound(err) {
 		routingPeer = openzrov1.OZRoutingPeer{
 			ObjectMeta: v1.ObjectMeta{
-				Name:       "router",
+				Name:       DefaultRouterName,
 				Namespace:  routerNamespace,
-				Finalizers: []string{"openzro.io/cleanup"},
+				Finalizers: []string{FinalizerResourceCleanup},
 				Labels:     r.DefaultLabels,
 			},
 			Spec: openzrov1.OZRoutingPeerSpec{},
@@ -210,7 +210,7 @@ func (r *ServiceReconciler) reconcileNBResource(nbResource *openzrov1.OZResource
 	nbResource.ObjectMeta.Name = req.Name
 	nbResource.ObjectMeta.Namespace = req.Namespace
 	nbResource.ObjectMeta.Labels = r.DefaultLabels
-	nbResource.Finalizers = []string{"openzro.io/cleanup"}
+	nbResource.Finalizers = []string{FinalizerResourceCleanup}
 	nbResource.Spec.Name = resourceName
 	nbResource.Spec.NetworkID = *routingPeer.Status.NetworkID
 	nbResource.Spec.Address = fmt.Sprintf("%s.%s.%s", svc.Name, svc.Namespace, r.ClusterDNS)

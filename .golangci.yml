@@ -30,13 +30,27 @@ linters:
   exclusions:
     generated: lax
     rules:
+      # path is a regexp; `api/*` matches `api`, `api/`, `api//` …
+      # but NOT `api/v1/foo.go`. The intent was to cover everything
+      # under those top-level dirs — use `api/` / `internal/` so the
+      # regex actually matches any nested path.
       - linters:
           - lll
-        path: api/*
+        path: api/
       - linters:
           - dupl
           - lll
-        path: internal/*
+        path: internal/
+      # goconst inside test files flags table-driven fixtures whose
+      # repeated strings ("test", "default", "test-resource", etc.)
+      # exist by design, not by accident. Excluding the rule for
+      # _test.go keeps the signal on production code (where shared
+      # finalizers / labels / kind strings live in internal/controller
+      # /constants.go) without forcing every fixture to grow a
+      # const alias.
+      - linters:
+          - goconst
+        path: _test\.go$
     paths:
       - third_party$
       - builtin$

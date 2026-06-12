@@ -38,7 +38,7 @@ type OZRoutingPeerReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *OZRoutingPeerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	logger := ctrl.Log.WithName("OZRoutingPeer").WithValues("namespace", req.Namespace, "name", req.Name)
+	logger := ctrl.Log.WithName(KindOZRoutingPeer).WithValues("namespace", req.Namespace, "name", req.Name)
 	logger.Info("Reconciling OZRoutingPeer")
 
 	ozrp := &openzrov1.OZRoutingPeer{}
@@ -234,7 +234,7 @@ func (r *OZRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 	labels := r.DefaultLabels
 	maps.Copy(labels, ozrp.Spec.Labels)
 	podLabels := labels
-	podLabels["app.kubernetes.io/name"] = "openzro-router"
+	podLabels[LabelAppKubernetesName] = LabelValueRouter
 
 	// Create deployment
 	if errors.IsNotFound(err) {
@@ -249,7 +249,7 @@ func (r *OZRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 				OwnerReferences: []v1.OwnerReference{
 					{
 						APIVersion:         openzrov1.GroupVersion.Identifier(),
-						Kind:               "OZRoutingPeer",
+						Kind:               KindOZRoutingPeer,
 						Name:               ozrp.Name,
 						UID:                ozrp.UID,
 						BlockOwnerDeletion: util.Ptr(true),
@@ -262,7 +262,7 @@ func (r *OZRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 				Replicas: &replicas,
 				Selector: &v1.LabelSelector{
 					MatchLabels: map[string]string{
-						"app.kubernetes.io/name": "openzro-router",
+						LabelAppKubernetesName: LabelValueRouter,
 					},
 				},
 				Template: corev1.PodTemplateSpec{
@@ -284,7 +284,7 @@ func (r *OZRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 												LocalObjectReference: corev1.LocalObjectReference{
 													Name: ozrp.Name,
 												},
-												Key: "setupKey",
+												Key: SecretKeySetupKey,
 											},
 										},
 									},
@@ -317,7 +317,7 @@ func (r *OZRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 		updatedDeployment.ObjectMeta.OwnerReferences = []v1.OwnerReference{
 			{
 				APIVersion:         openzrov1.GroupVersion.Identifier(),
-				Kind:               "OZRoutingPeer",
+				Kind:               KindOZRoutingPeer,
 				Name:               ozrp.Name,
 				UID:                ozrp.UID,
 				BlockOwnerDeletion: util.Ptr(true),
@@ -334,7 +334,7 @@ func (r *OZRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 		updatedDeployment.Spec.Replicas = &replicas
 		updatedDeployment.Spec.Selector = &v1.LabelSelector{
 			MatchLabels: map[string]string{
-				"app.kubernetes.io/name": "openzro-router",
+				LabelAppKubernetesName: LabelValueRouter,
 			},
 		}
 		updatedDeployment.Spec.Template.Spec.Tolerations = ozrp.Spec.Tolerations
@@ -354,7 +354,7 @@ func (r *OZRoutingPeerReconciler) handleDeployment(ctx context.Context, req ctrl
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: ozrp.Name,
 						},
-						Key: "setupKey",
+						Key: SecretKeySetupKey,
 					},
 				},
 			},
@@ -478,7 +478,7 @@ func (r *OZRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 				OwnerReferences: []v1.OwnerReference{
 					{
 						APIVersion:         openzrov1.GroupVersion.Identifier(),
-						Kind:               "OZRoutingPeer",
+						Kind:               KindOZRoutingPeer,
 						Name:               ozrp.Name,
 						UID:                ozrp.UID,
 						BlockOwnerDeletion: util.Ptr(true),
@@ -487,7 +487,7 @@ func (r *OZRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 				Labels: r.DefaultLabels,
 			},
 			StringData: map[string]string{
-				"setupKey": setupKey.Key,
+				SecretKeySetupKey: setupKey.Key,
 			},
 		}
 		err = r.Client.Create(ctx, &skSecret)
@@ -498,7 +498,7 @@ func (r *OZRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 				return &ctrl.Result{}, err
 			}
 			skSecret.Data = map[string][]byte{
-				"setupKey": []byte(setupKey.Key),
+				SecretKeySetupKey: []byte(setupKey.Key),
 			}
 			err = r.Client.Update(ctx, &skSecret)
 		}
@@ -542,7 +542,7 @@ func (r *OZRoutingPeerReconciler) handleSetupKey(ctx context.Context, req ctrl.R
 			return &ctrl.Result{}, err
 		}
 
-		if _, ok := skSecret.Data["setupKey"]; errors.IsNotFound(err) || !ok {
+		if _, ok := skSecret.Data[SecretKeySetupKey]; errors.IsNotFound(err) || !ok {
 			// Someone deleted setup key secret
 			// Revoke SK from openZro and re-generate
 			err = r.OpenZro.SetupKeys.Delete(ctx, *ozrp.Status.SetupKeyID)
@@ -588,13 +588,13 @@ func (r *OZRoutingPeerReconciler) handleGroup(ctx context.Context, req ctrl.Requ
 				OwnerReferences: []v1.OwnerReference{
 					{
 						APIVersion:         openzrov1.GroupVersion.Identifier(),
-						Kind:               "OZRoutingPeer",
+						Kind:               KindOZRoutingPeer,
 						Name:               ozrp.Name,
 						UID:                ozrp.UID,
 						BlockOwnerDeletion: util.Ptr(true),
 					},
 				},
-				Finalizers: []string{"openzro.io/group-cleanup", "openzro.io/routing-peer-cleanup"},
+				Finalizers: []string{FinalizerGroupCleanup, FinalizerRoutingPeerCleanup},
 				Labels:     r.DefaultLabels,
 			},
 			Spec: openzrov1.OZGroupSpec{
@@ -732,8 +732,8 @@ func (r *OZRoutingPeerReconciler) handleDelete(ctx context.Context, req ctrl.Req
 		}
 	}
 
-	if nbGroup.Spec.Name != "" && slices.Contains(nbGroup.Finalizers, "openzro.io/routing-peer-cleanup") {
-		nbGroup.Finalizers = util.Without(nbGroup.Finalizers, "openzro.io/routing-peer-cleanup")
+	if nbGroup.Spec.Name != "" && slices.Contains(nbGroup.Finalizers, FinalizerRoutingPeerCleanup) {
+		nbGroup.Finalizers = util.Without(nbGroup.Finalizers, FinalizerRoutingPeerCleanup)
 		logger.Info("Removing openzro.io/routing-peer-cleanup finalizer OZGroup", "namespace", nbGroup.Namespace, "name", nbGroup.Name)
 		err = r.Client.Update(ctx, &nbGroup)
 		if err != nil {

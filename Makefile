@@ -98,7 +98,26 @@ uninstall: manifests ## Uninstall CRDs from the K8s cluster specified in ~/.kube
 
 .PHONY: deploy
 deploy: manifests ## Deploy controller to the K8s cluster specified in ~/.kube/config.
-	$(HELM) install -n openzro --create-namespace openzro-operator --set operator.image.tag=$(word 2,$(subst :, ,${IMG})) helm/openzro-operator
+	@# IMG can be `docker.io/openzro/openzro-operator:e2e` (e2e
+	@# suite), `ghcr.io/openzro/openzro-operator:0.3.2-alpha.X`
+	@# (release lane), or any operator-supplied override. Before
+	@# this fix the deploy target only forwarded the tag, so an e2e
+	@# IMG of `docker.io/...:e2e` landed in the cluster as
+	@# `ghcr.io/openzro/openzro-operator:e2e` because the chart's
+	@# defaults are `ghcr.io` + `openzro/openzro-operator`. The
+	@# kind node never had that ghcr tag (the e2e suite loads only
+	@# the docker.io variant), so the pod ImagePullBackOff'd and
+	@# the whole e2e job failed. Split IMG and forward all three
+	@# components to helm so the chart references the image we
+	@# actually built / loaded.
+	$(eval IMG_REGISTRY := $(firstword $(subst /, ,$(firstword $(subst :, ,${IMG})))))
+	$(eval IMG_PATH := $(patsubst $(IMG_REGISTRY)/%,%,$(firstword $(subst :, ,${IMG}))))
+	$(eval IMG_TAG := $(word 2,$(subst :, ,${IMG})))
+	$(HELM) install -n openzro --create-namespace openzro-operator \
+	  --set operator.image.registry=$(IMG_REGISTRY) \
+	  --set operator.image.repository=$(IMG_PATH) \
+	  --set operator.image.tag=$(IMG_TAG) \
+	  helm/openzro-operator
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
