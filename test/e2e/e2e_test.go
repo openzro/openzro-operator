@@ -57,6 +57,19 @@ var _ = Describe("Manager", Ordered, func() {
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to install CRDs")
 
+		// Stub the openzro-mgmt-api-key Secret the chart references
+		// via operator.openzroAPI.keyFromSecret.name. In a real
+		// install the operator-config chart materializes it; the
+		// e2e suite only validates that the operator pod starts and
+		// serves metrics, so a placeholder value is enough. Without
+		// this the pod ends in CreateContainerConfigError because
+		// the envFrom secretRef can't be resolved.
+		By("stubbing the openzro-mgmt-api-key Secret the operator expects")
+		cmd = exec.Command("kubectl", "create", "secret", "generic", "openzro-mgmt-api-key",
+			"--from-literal=OZ_API_KEY=e2e-placeholder",
+			"-n", namespace)
+		_, _ = utils.Run(cmd) // ignore "AlreadyExists" on test reruns
+
 		By("deploying the openzro-operator")
 		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", projectImage))
 		out, err := utils.Run(cmd)
