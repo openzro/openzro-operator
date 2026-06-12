@@ -71,7 +71,7 @@ var _ = Describe("NetworkRouter Controller", func() {
 		})
 
 		It("creates a routing peer along with a deployment", func() {
-			zoneReq := api.ZoneRequest{
+			zoneReq := api.DNSZoneRequest{
 				Name:   "cluster.local",
 				Domain: "cluster.local",
 			}

@@ -75,7 +75,7 @@ var _ = Describe("NetworkResource Controller", func() {
 		})
 
 		It("creates a network resource and DNS record", func() {
-			zoneReq := api.ZoneRequest{
+			zoneReq := api.DNSZoneRequest{
 				Name:   "cluster.local",
 				Domain: "cluster.local",
 			}
