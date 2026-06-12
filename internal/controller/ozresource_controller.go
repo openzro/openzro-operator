@@ -499,7 +499,7 @@ func (r *OZResourceReconciler) handleGroups(ctx context.Context, req ctrl.Reques
 				return nil, nil, err
 			}
 		} else if len(g.OwnerReferences) == 1 {
-			g.Finalizers = util.Without(g.Finalizers, "openzro.io/resource-cleanup")
+			g.Finalizers = util.Without(g.Finalizers, FinalizerOZResourceCleanup)
 			err = r.Client.Update(ctx, &g)
 			if err != nil && !kerrors.IsNotFound(err) {
 				logger.Error(errKubernetesAPI, "error updating OZGroup", "err", err)
@@ -533,7 +533,7 @@ func (r *OZResourceReconciler) handleGroups(ctx context.Context, req ctrl.Reques
 							BlockOwnerDeletion: util.Ptr(true),
 						},
 					},
-					Finalizers: []string{FinalizerGroupCleanup, "openzro.io/resource-cleanup"},
+					Finalizers: []string{FinalizerGroupCleanup, FinalizerOZResourceCleanup},
 					Labels:     r.DefaultLabels,
 				},
 				Spec: openzrov1.OZGroupSpec{
@@ -637,7 +637,7 @@ func (r *OZResourceReconciler) reconcileDelete(ctx context.Context, req ctrl.Req
 				return err
 			}
 		} else if len(g.OwnerReferences) == 1 {
-			g.Finalizers = util.Without(g.Finalizers, "openzro.io/resource-cleanup")
+			g.Finalizers = util.Without(g.Finalizers, FinalizerOZResourceCleanup)
 			err = r.Client.Update(ctx, &g)
 			if err != nil && !kerrors.IsNotFound(err) {
 				return err

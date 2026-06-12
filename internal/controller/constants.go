@@ -23,6 +23,23 @@ const (
 	// underlying peer object.
 	FinalizerRoutingPeerCleanup = "openzro.io/routing-peer-cleanup"
 
+	// FinalizerOZResourceCleanup is the OZResource-specific teardown
+	// gate; pairs with FinalizerGroupCleanup on the group the
+	// resource is exposed through.
+	FinalizerOZResourceCleanup = "openzro.io/resource-cleanup"
+
+	// KubernetesDefaultNamespace is the well-known `default`
+	// namespace. The Service reconciler short-circuits there so the
+	// in-cluster API Service (handled by the Helm chart) isn't
+	// reconciled into an openZro resource.
+	KubernetesDefaultNamespace = "default"
+
+	// DefaultRouterName is the well-known OZRoutingPeer name the
+	// Service reconciler materializes per controller namespace. The
+	// string is referenced six times across creates/lookups in
+	// service_controller.go.
+	DefaultRouterName = "router"
+
 	// LabelAppKubernetesName is the standard Kubernetes
 	// recommended-label key used to identify the workload that
 	// owns a pod/service (routing-peer here).

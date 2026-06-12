@@ -64,7 +64,7 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Special case for kubernetes API Service
 	// Handled by Helm chart
-	if svc.Namespace == "default" && svc.Name == "kubernetes" {
+	if svc.Namespace == KubernetesDefaultNamespace && svc.Name == "kubernetes" {
 		return ctrl.Result{}, nil
 	}
 
@@ -127,7 +127,7 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 
 	var routingPeer openzrov1.OZRoutingPeer
 	// Check if OZRoutingPeer exists
-	err := r.Client.Get(ctx, types.NamespacedName{Namespace: routerNamespace, Name: "router"}, &routingPeer)
+	err := r.Client.Get(ctx, types.NamespacedName{Namespace: routerNamespace, Name: DefaultRouterName}, &routingPeer)
 	if err != nil && !errors.IsNotFound(err) {
 		logger.Error(errKubernetesAPI, "error getting OZRoutingPeer", "err", err)
 		return ctrl.Result{}, err
@@ -137,7 +137,7 @@ func (r *ServiceReconciler) exposeService(ctx context.Context, req ctrl.Request,
 	if errors.IsNotFound(err) {
 		routingPeer = openzrov1.OZRoutingPeer{
 			ObjectMeta: v1.ObjectMeta{
-				Name:       "router",
+				Name:       DefaultRouterName,
 				Namespace:  routerNamespace,
 				Finalizers: []string{FinalizerResourceCleanup},
 				Labels:     r.DefaultLabels,
