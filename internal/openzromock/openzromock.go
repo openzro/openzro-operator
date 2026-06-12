@@ -52,22 +52,26 @@ func Client() *openzro.Client {
 		output.Enabled = input.Enabled
 		return output
 	})
-	addHandler(mux, "dns/zones", func(id string, input api.ZoneRequest, output api.Zone) api.Zone {
+	addHandler(mux, "dns/zones", func(id string, input api.DNSZoneRequest, output api.DNSZone) api.DNSZone {
 		output.Id = id
 		output.Name = input.Name
 		output.Domain = input.Domain
 		output.DistributionGroups = input.DistributionGroups
 		output.EnableSearchDomain = input.EnableSearchDomain
-		if input.Enabled != nil {
-			output.Enabled = *input.Enabled
-		}
+		// DNSZone.Enabled is *bool in alpha.83+ (was bool in
+		// alpha.1). Copy the pointer through directly.
+		output.Enabled = input.Enabled
 		return output
 	})
 	addHandler(mux, "dns/zones/{zone}/records", func(id string, input api.DNSRecordRequest, output api.DNSRecord) api.DNSRecord {
 		output.Id = id
 		output.Name = input.Name
 		output.Ttl = input.Ttl
-		output.Type = input.Type
+		// DNSRecord.Type and DNSRecordRequest.Type are distinct
+		// generated types (DNSRecordType vs DNSRecordRequestType,
+		// both string aliases). Cast through string so the mock
+		// keeps the round-trip semantics.
+		output.Type = api.DNSRecordType(input.Type)
 		output.Content = input.Content
 		return output
 	})

@@ -170,11 +170,17 @@ func (r *NetworkResourceReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 	}
 
 	recordID, err := func() (string, error) {
+		// alpha.83's DNS Zones API split the record TTL into a
+		// pointer (omitempty) and the record-type enum into two
+		// generated types — DNSRecordType (response) and
+		// DNSRecordRequestType (request). Update both call sites
+		// accordingly.
+		ttl := int(5 * time.Minute / time.Second)
 		dnsReq := api.DNSRecordRequest{
 			Content: svc.Spec.ClusterIP,
 			Name:    strings.Join([]string{svc.Name, svc.Namespace, zone.Name}, "."),
-			Ttl:     int(5 * time.Minute / time.Second),
-			Type:    api.DNSRecordTypeA,
+			Ttl:     &ttl,
+			Type:    api.DNSRecordRequestTypeA,
 		}
 		if netResource.Status.DNSZoneID != "" && netResource.Status.DNSRecordID != "" {
 			recordResp, err := r.OpenZro.DNSZones.UpdateRecord(ctx, netResource.Status.DNSZoneID, netResource.Status.DNSRecordID, dnsReq)
