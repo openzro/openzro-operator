@@ -46,7 +46,7 @@ type OZResourceReconciler struct {
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
 func (r *OZResourceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (res ctrl.Result, err error) {
-	logger := ctrl.Log.WithName("OZResource").WithValues("namespace", req.Namespace, "name", req.Name)
+	logger := ctrl.Log.WithName(KindOZResource).WithValues("namespace", req.Namespace, "name", req.Name)
 	logger.Info("Reconciling OZResource")
 
 	nbResource := &openzrov1.OZResource{}
@@ -148,7 +148,7 @@ func (r *OZResourceReconciler) handlePolicyCreate(ctx context.Context, nbResourc
 		ObjectMeta: v1.ObjectMeta{
 			Name:        generatedName,
 			Annotations: map[string]string{"openzro.io/generated-by": req.NamespacedName.String()},
-			Finalizers:  []string{"openzro.io/cleanup"},
+			Finalizers:  []string{FinalizerResourceCleanup},
 			Labels:      r.DefaultLabels,
 		},
 		Spec: openzrov1.OZPolicySpec{
@@ -527,13 +527,13 @@ func (r *OZResourceReconciler) handleGroups(ctx context.Context, req ctrl.Reques
 					OwnerReferences: []v1.OwnerReference{
 						{
 							APIVersion:         openzrov1.GroupVersion.Identifier(),
-							Kind:               "OZResource",
+							Kind:               KindOZResource,
 							Name:               nbResource.Name,
 							UID:                nbResource.UID,
 							BlockOwnerDeletion: util.Ptr(true),
 						},
 					},
-					Finalizers: []string{"openzro.io/group-cleanup", "openzro.io/resource-cleanup"},
+					Finalizers: []string{FinalizerGroupCleanup, "openzro.io/resource-cleanup"},
 					Labels:     r.DefaultLabels,
 				},
 				Spec: openzrov1.OZGroupSpec{
@@ -560,7 +560,7 @@ func (r *OZResourceReconciler) handleGroups(ctx context.Context, req ctrl.Reques
 			if !ownerExists {
 				nbGroup.OwnerReferences = append(nbGroup.OwnerReferences, v1.OwnerReference{
 					APIVersion:         openzrov1.GroupVersion.Identifier(),
-					Kind:               "OZResource",
+					Kind:               KindOZResource,
 					Name:               nbResource.Name,
 					UID:                nbResource.UID,
 					BlockOwnerDeletion: util.Ptr(true),
@@ -646,7 +646,7 @@ func (r *OZResourceReconciler) reconcileDelete(ctx context.Context, req ctrl.Req
 	}
 
 	// This is needed because finalizers have been added externally in the past.
-	controllerutil.RemoveFinalizer(nbResource, "openzro.io/cleanup")
+	controllerutil.RemoveFinalizer(nbResource, FinalizerResourceCleanup)
 	controllerutil.RemoveFinalizer(nbResource, ResourceFinalizer)
 	err = r.Client.Update(ctx, nbResource)
 	if err != nil {

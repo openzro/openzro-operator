@@ -186,7 +186,7 @@ func (r *NetworkRouterReconciler) Reconcile(ctx context.Context, req ctrl.Reques
 
 	// Create the deployment.
 	selectorLabels := map[string]string{
-		"app.kubernetes.io/name":     "networkrouter",
+		LabelAppKubernetesName:     "networkrouter",
 		"app.kubernetes.io/instance": req.Name,
 	}
 
