@@ -34,6 +34,12 @@ const (
 	// reconciled into an openZro resource.
 	KubernetesDefaultNamespace = "default"
 
+	// KubernetesAPIServiceName is the well-known name of the
+	// in-cluster Kubernetes API Service (`default/kubernetes`);
+	// pairs with KubernetesDefaultNamespace in the Service
+	// reconciler's short-circuit.
+	KubernetesAPIServiceName = "kubernetes"
+
 	// DefaultRouterName is the well-known OZRoutingPeer name the
 	// Service reconciler materializes per controller namespace. The
 	// string is referenced six times across creates/lookups in

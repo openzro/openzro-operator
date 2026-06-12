@@ -64,7 +64,7 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	// Special case for kubernetes API Service
 	// Handled by Helm chart
-	if svc.Namespace == KubernetesDefaultNamespace && svc.Name == "kubernetes" {
+	if svc.Namespace == KubernetesDefaultNamespace && svc.Name == KubernetesAPIServiceName {
 		return ctrl.Result{}, nil
 	}
 
