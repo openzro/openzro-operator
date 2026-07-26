@@ -341,8 +341,8 @@ github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.0 h1:8SG7/vwALn54lVB/0yZ/MMwhFrPYtpEHQb2IpWsCzug=
 github.com/opencontainers/image-spec v1.1.0/go.mod h1:W4s4sFTMaBeK1BQLXbG4AdM2szdn85PY75RI83NrTrM=
-github.com/openzro/openzro v0.53.1-alpha.83 h1:+JIOm3Hj2prUTHTTgBfFxfv2NWt80v9/X6R6IXVOtRc=
-github.com/openzro/openzro v0.53.1-alpha.83/go.mod h1:aZn0TQ9Mdoyodvsv5M/FmbKqW+sAaZWtsTvY8hf8ZHI=
+github.com/openzro/openzro v0.53.1-alpha.86 h1:kikkiA3dGXQO6cd8gyw0VHEovoaBH/7se0r6Hd20Y18=
+github.com/openzro/openzro v0.53.1-alpha.86/go.mod h1:aZn0TQ9Mdoyodvsv5M/FmbKqW+sAaZWtsTvY8hf8ZHI=
 github.com/oschwald/maxminddb-golang v1.12.0 h1:9FnTOD0YOhP7DGxGsq4glzpGy5+w7pq50AS6wALUMYs=
 github.com/oschwald/maxminddb-golang v1.12.0/go.mod h1:q0Nob5lTCqyQ8WT6FYgS1L7PXKVVbgiymefNwIjPzgY=
 github.com/parquet-go/bitpack v1.0.0 h1:AUqzlKzPPXf2bCdjfj4sTeacrUwsT7NlcYDMUQxPcQA=
